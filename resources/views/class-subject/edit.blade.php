@@ -26,7 +26,7 @@
                         <form class="pt-3 edit-class-subject-validate-form" data-success-function="formSuccessFunction" data-pre-submit-function="classValidation" id="edit-form" action="{{ route('class.subject.update',[$id]) }}" novalidate="novalidate">
                             <div class="modal-body">
                                 <div class="form-group">
-                                    <h4 title="Core Subjects are the Compulsory Subject." class="mb-3">{{ __('Core Subjects') }}<span class="fa fa-info-circle pl-2"></span></h4>
+                                    <h4 title="{{ __('Core Subjects are the Compulsory Subject') }}." class="mb-3">{{ __('Core Subjects') }}<span class="fa fa-info-circle pl-2"></span></h4>
                                     <div class="core-subject-repeater">
                                         <div data-repeater-list="core_subject">
                                             <div class="row" data-repeater-item>
@@ -51,7 +51,7 @@
                                                         <select name="id" id="core_subject_id" class="form-control subject" required="required">
                                                             <option value="">{{ __('Select Subject') }}</option>
                                                             @foreach ($subjects as $subject)
-                                                                <option value="{{ $subject->id }}">{{ $subject->name }} - {{$subject->type}}</option>
+                                                                <option value="{{ $subject->id }}">{{ $subject->name }} - {{ __($subject->type)}}</option>
                                                             @endforeach
                                                         </select>
                                                     </div>
@@ -71,7 +71,7 @@
                                     </div>
                                     <hr>
 
-                                    <h4 class="mb-4" title="Elective Subjects are the subjects where student have the choice to select the subject from the given subjects.">
+                                    <h4 class="mb-4" title="{{ __('Elective Subjects are the subjects where student have the choice to select the subject from the given subjects') }}.">
                                         {{ __('elective_subject') }} <span class="fa fa-info-circle pl-2"></span>
                                     </h4>
 
@@ -81,7 +81,7 @@
                                                 <div data-repeater-item class="elective-subject-group">
                                                     <input type="hidden" name="id" class="class_subject_group_id"/>
                                                     <div class="align-items-center d-flex mb-2">
-                                                        <h5 class="mb-0 group-no">Group</h5>
+                                                        <h5 class="mb-0 group-no">{{ __('Group') }}</h5>
                                                         <button data-repeater-delete type="button" class="btn p-0 ml-1" title="Delete Subject Group">
                                                             <span class="fa fa-2x fa-times-circle text-danger"></span>
                                                         </button>
@@ -109,7 +109,7 @@
                                                                         <select name="id" id="elective_id" class="form-control subject" required="required">
                                                                             <option value="">{{ __('Select Subject') }}</option>
                                                                             @foreach ($subjects as $subject)
-                                                                                <option value="{{ $subject->id }}">{{ $subject->name }} - {{$subject->type}}</option>
+                                                                                <option value="{{ $subject->id }}">{{ $subject->name }} - {{ __($subject->type)}}</option>
                                                                             @endforeach
                                                                         </select>
 
@@ -144,7 +144,7 @@
                                         </div>
                                     </div>
                                 </div>
-                                <input class="btn btn-theme mt-4" type="submit" value={{ __('submit') }} />
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
                             </div>
                         </form>
                     </div>

@@ -43,15 +43,16 @@
                             <tr>
                                 <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{__('id')}}</th>
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
+                                <th scope="col" data-field="date" data-formatter="dateFormatter">{{ __('date') }}</th>
                                 <th scope="col" data-field="school.logo" data-formatter="imageFormatter" data-align="center">{{ __('logo')}}</th>
                                 <th scope="col" data-field="school.name" data-align="center">{{ __('school')}}</th>
                                 <th scope="col" data-field="amount" data-align="center">{{ __('Amount')}}</th>
-                                <th scope="col" data-field="payment_gateway" data-align="center" data-formatter="feesTransactionParentGateway">{{ __('Payment Gateway') }}</th>
+                                <th scope="col" data-field="payment_gateway" data-align="center" data-formatter="subscriptionTransactionParentGateway">{{ __('Payment Type') }}</th>
                                 <th scope="col" data-field="payment_status" data-align="center" data-formatter="transactionPaymentStatus">{{ __('Payment Status') }}</th>
-                                <th scope="col" data-field="order_id" data-align="center" data-visible="false">{{ __('order_id') }}</th>
+                                <th scope="col" data-field="order_id" data-align="center" data-visible="false">{{ __('order_id_cheque_number') }}</th>
                                 <th scope="col" data-field="payment_id" data-align="center" data-visible="false">{{ __('payment_id') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
                             </tr>
                             </thead>
                         </table>

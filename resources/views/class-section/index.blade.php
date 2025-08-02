@@ -23,7 +23,7 @@
 
                                 <div class="">
                                     <div class="col-12 text-right d-flex justify-content-end text-right align-items-end">
-                                        <b><a href="#" class="table-list-type active mr-2" data-value="All">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-value="Trashed">{{__("Trashed")}}</a>
+                                        <b><a href="#" class="table-list-type active mr-2" data-id="0">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{__("Trashed")}}</a>
                                     </div>
                                 </div>
                             </div>
@@ -40,7 +40,7 @@
                         <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                data-url="{{ route('class-section.show',[1]) }}" data-click-to-select="true" data-side-pagination="server"
                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
-                               data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                               data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                data-mobile-responsive="true" data-sort-name="id" data-toolbar="#toolbar" data-sort-order="desc"
                                data-maintain-selected="true" data-export-data-type='all'
@@ -55,8 +55,8 @@
                                 <th scope="col" data-field="full_name">{{ __('Class') }}</th>
                                 <th scope="col" data-field="class_teachers_list" data-formatter="classTeacherListFormatter">{{ __('Class Teacher') }}</th>
                                 <th scope="col" data-field="subject_teachers_list" data-formatter="subjectTeacherListFormatter">{{ __('Subject Teacher') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
 
                                 @canany(['class-section-edit','class-section-delete'])
                                     <th scope="col" data-field="operate" data-escape="false">{{ __('action') }}</th>

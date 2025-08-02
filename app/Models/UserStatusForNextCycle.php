@@ -12,6 +12,8 @@ class UserStatusForNextCycle extends Model
     protected $fillable = ['user_id','status','school_id'];
 
     public function scopeOwner() {
-        return $this->where('school_id', Auth::user()->school_id);
+        if (Auth::user()) {
+            return $this->where('school_id', Auth::user()->school_id);
+        }
     }
 }

@@ -19,30 +19,36 @@
                             {{ __('create') . ' ' . __('lesson') }}
                         </h4>
                         <form class="pt-3 add-lesson-form" id="create-form" data-success-function="formSuccessFunction"
-                              action="{{ route('lesson.store') }}" method="POST" novalidate="novalidate">
+                            action="{{ route('lesson.store') }}" method="POST" novalidate="novalidate">
                             <div class="row">
+                                {!! Form::hidden('user_id', Auth::user()->id, ['id' => 'user_id']) !!}
                                 <div class="form-group col-sm-12 col-md-6">
                                     <label>{{ __('Class') . ' ' . __('section') }} <span
-                                                class="text-danger">*</span></label>
-                                    <select name="class_section_id" id="class-section-id"
-                                            class="class_section_id form-control">
-                                        <option value="">--{{ __('select_class_section') }}--</option>
+                                            class="text-danger">*</span></label>
+                                    <select name="class_section_id[]" id="class-section-id"
+                                        class="class_section_id form-control select2-dropdown select2-hidden-accessible" multiple>
+                                        {{-- <option value="">--{{ __('select_class_section') }}--</option> --}}
                                         @foreach ($class_section as $section)
                                             <option value="{{ $section->id }}" data-class="{{ $section->class->id }}">
                                                 {{ $section->full_name }}
                                             </option>
                                         @endforeach
                                     </select>
+                                    <div class="form-check w-fit-content">
+                                        <label class="form-check-label user-select-none">
+                                            <input type="checkbox" class="form-check-input" id="select-all" value="1">{{__("Select All")}}
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <div class="form-group col-sm-12 col-md-6">
                                     <label>{{ __('subject') }} <span class="text-danger">*</span></label>
-                                    <select name="class_subject_id" id="subject-id" class="form-control">
-                                        <option value="">-- {{ __('Select Subject') }} --</option>
+                                    <select name="subject_id" id="subject-id" class="form-control">
+                                        {{-- <option value="">-- {{ __('Select Subject') }} --</option> --}}
                                         <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
                                         @foreach ($subjectTeachers as $item)
-                                            <option value="{{ $item->class_subject_id }}"
-                                                    data-class-section="{{ $item->class_section_id }}">
+                                            <option value="{{ $item->subject_id }}"
+                                                data-class-section="{{ $item->class_section_id }}" data-user="{{ Auth::user()->id }}">
                                                 {{ $item->subject_with_name }}</option>
                                         @endforeach
                                     </select>
@@ -51,7 +57,7 @@
                                 <div class="form-group col-sm-12 col-md-6">
                                     <label>{{ __('lesson_name') }} <span class="text-danger">*</span></label>
                                     <input type="text" id="name" name="name"
-                                           placeholder="{{ __('lesson_name') }}" class="form-control"/>
+                                        placeholder="{{ __('lesson_name') }}" class="form-control"/>
                                 </div>
 
                                 <div class="form-group col-sm-12 col-md-6">
@@ -72,6 +78,7 @@
                                                 <option value="file_upload">{{ __('file_upload') }}</option>
                                                 <option value="youtube_link">{{ __('youtube_link') }}</option>
                                                 <option value="video_upload">{{ __('video_upload') }}</option>
+                                                <option value="other_link">{{ __('other_link') }}</option>
                                             </select>
                                         </div>
                                         <div class="form-group col-xl-3" id="file_name_div" style="display: none">
@@ -81,7 +88,7 @@
                                         </div>
                                         <div class="form-group col-xl-3" id="file_thumbnail_div" style="display: none">
                                             <label>{{ __('thumbnail') }} <span class="text-danger">*</span></label>
-                                            <input type="file" name="file[0][thumbnail]"
+                                            <input type="file" accept="image/*" name="file[0][thumbnail]"
                                                    class="file_thumbnail form-control" required>
                                         </div>
                                         <div class="form-group col-xl-3" id="file_div" style="display: none">
@@ -112,7 +119,9 @@
                                 </div>
                             </div>
 
-                            <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
+                            {{-- <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}> --}}
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -153,6 +162,18 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                {{-- Semester  --}}
+                                @if($semesters->count() > 0)
+                                    <div class="col">
+                                        <label for="filter-semester-id" class="filter-menu">{{ __('Semester') }}</label>
+                                        <select name="filter-semester-id" id="filter-semester-id" class="form-control">
+                                            <option value="">{{ __('all') }}</option>
+                                            @foreach ($semesters as $semester)
+                                                <option value="{{ $semester->id }}">{{ $semester->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
                             </div>
 
                         </div>
@@ -173,11 +194,11 @@
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="name" data-sortable="false">{{ __('name') }}</th>
                                 <th scope="col" data-field="description" data-events="tableDescriptionEvents" data-formatter="descriptionFormatter" data-sortable="false">{{ __('description') }}</th>
-                                <th scope="col" data-field="class_section_with_medium" data-sortable="false">{{ __('class_section') }}</th>
+                                <th scope="col" data-field="class_section_with_medium" data-sortable="false" data-formatter="ClassSectionFormatter">{{ __('class_section') }}</th>
                                 <th scope="col" data-field="subject_with_name" data-sortable="false">{{ __('subject') }}</th>
                                 <th scope="col" data-field="file" data-formatter="fileFormatter" data-sortable="false">{{ __('file') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="false" data-visible="false"> {{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="false" data-visible="false"> {{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false"> {{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false"> {{ __('updated_at') }}</th>
                                 <th scope="col" data-events="lessonEvents" data-field="operate" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>

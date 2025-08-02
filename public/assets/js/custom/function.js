@@ -1,12 +1,29 @@
 "use strict";
 
+var toast_position = 'top-right';
+function isRTL() {
+    var dir = $('html').attr('dir');
+    if (dir === 'rtl') {
+        return true;
+    } else {
+        return false;
+    }
+    return false;
+    return dir === 'rtl';
+}
+if (isRTL()) {
+    toast_position = 'top-left';
+} else {
+    toast_position = 'top-right';
+}
+
 function showErrorToast(message) {
     $.toast({
         text: message,
         showHideTransition: 'slide',
         icon: 'error',
         loaderBg: '#f2a654',
-        position: 'top-right',
+        position: toast_position,
         hideAfter: 5000
     });
 }
@@ -17,7 +34,7 @@ function showSuccessToast(message) {
         showHideTransition: 'slide',
         icon: 'success',
         loaderBg: '#f96868',
-        position: 'top-right',
+        position: toast_position,
         // hideAfter: 1000
 
     });
@@ -29,7 +46,7 @@ function showWarningToast(message) {
         showHideTransition: 'slide',
         icon: 'warning',
         loaderBg: '#f96868',
-        position: 'top-right',
+        position: toast_position,
         // hideAfter: 1000
 
     });
@@ -75,7 +92,6 @@ function ajaxRequest(type, url, data, beforeSendCallback = null, successCallback
                 finalCallback(data);
             }
         }, error: function (jqXHR) {
-            console.log(jqXHR);
             if (jqXHR.responseJSON) {
                 showErrorToast(jqXHR.responseJSON.message);
             }
@@ -111,6 +127,7 @@ function formAjaxRequest(type, url, data, formElement, submitButtonElement, succ
 
         function mainErrorCallback(response) {
             showErrorToast(response.message);
+            closeLoading();
             if (errorCallback != null) {
                 errorCallback(response);
             }
@@ -133,18 +150,21 @@ function createCkeditor() {
             config.mathJaxLib = '//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML';
             config.extraPlugins = 'mathjax';
             config.height = 200;
+            config.contentsLangDirection = layout_direction;
             return true;
         }
         if (textarea.className == "editor_options") {
             config.mathJaxLib = '//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML';
             config.extraPlugins = 'mathjax';
-            config.height = 100
+            config.height = 100;
+            config.contentsLangDirection = layout_direction;
             return true;
         }
         if (textarea.className == "edit_editor_options") {
             config.mathJaxLib = '//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML';
             config.extraPlugins = 'mathjax';
-            config.height = 100
+            config.height = 100;
+            config.contentsLangDirection = layout_direction;
             return true;
         }
         return false;
@@ -418,15 +438,126 @@ function showPermanentlyDeletePopupModal(url, options = {}) {
 //     return `${h}:${m}:00`;
 // }
 
-const getSubjectOptionsList = (SubjectId, $this) => {
+const getSubjectOptionsList = (SubjectId, $this, userId) => {
+    $(SubjectId).val("").removeAttr('disabled').show();
+    if ($this.val() && $this.val().length) {
+        $(SubjectId).find('option').hide();
+        $(SubjectId).find('option[value=""]').show(); // Always show the empty option
+        $(SubjectId).find('option[value="data-not-found"]').hide(); // Hide the not found option initially
+        
+        let hasValidOptions = false;
+        let shownSubjects = new Set(); // Track unique subjects that have been shown
+        
+        let values = Array.isArray($this.val()) ? $this.val() : [$this.val()];
+        $.each(values, function (index, value) {
+                let optionSelector = 'option[data-class-section="' + value + '"]';
+            // Only add user filter if userId is provided
+            if (userId && userId !== '') {
+                optionSelector += '[data-user="' + userId + '"]';
+            }
+            
+            console.log('Looking for options with selector:', optionSelector);
+            let matchingOptions = $(SubjectId).find(optionSelector);
+            console.log('Found', matchingOptions.length, 'matching options');
+            
+            if (matchingOptions.length) {
+                // Filter to show only unique subjects
+                matchingOptions.each(function() {
+                    let subjectValue = $(this).val();
+                    let subjectText = $(this).text().trim();
+                    
+                    // Create unique identifier (you can use value or text based on your needs)
+                    let uniqueIdentifier = subjectValue + '_' + subjectText;
+                    
+                    // Only show if this subject hasn't been shown yet
+                    if (!shownSubjects.has(uniqueIdentifier) && subjectValue !== '' && subjectValue !== 'data-not-found') {
+                        $(this).show();
+                        shownSubjects.add(uniqueIdentifier);
+                        hasValidOptions = true;
+                        console.log('Showing unique subject:', subjectText);
+                    } else if (shownSubjects.has(uniqueIdentifier)) {
+                        console.log('Hiding duplicate subject:', subjectText);
+                    }
+                });
+            }
+        });
+        
+        console.log('Has valid options:', hasValidOptions);
+        console.log('Unique subjects shown:', Array.from(shownSubjects));
+        
+        if (!hasValidOptions) {
+            $(SubjectId).find('option[value="data-not-found"]').show();
+            $(SubjectId).val("data-not-found").attr('disabled', true);
+            console.log('No valid options found, showing "data-not-found"');
+        } else {
+            $(SubjectId).removeAttr('disabled');
+            console.log('Valid options found, enabling dropdown');
+        }
+    } else {
+        $(SubjectId).find('option[value="data-not-found"]').show();
+        $(SubjectId).val("data-not-found").attr('disabled', true);
+        console.log('No class sections selected, showing "data-not-found"');
+    }
+};
+
+const getElectiveSubjectOptionsList = (SubjectId, $this) => {
     $(SubjectId).val("").removeAttr('disabled').show();
     $(SubjectId).find('option').hide();
-    if ($(SubjectId).find('option[data-class-section="' + $this.val() + '"]').length) {
-        $(SubjectId).find('option[data-class-section="' + $this.val() + '"]').show().trigger('change');
+    
+    if ($this.val()) {
+        // Get the data-class-id from the selected option
+        var selectedOption = $this.find(':selected');
+        var dataClassId = selectedOption.data('class-id');
+        
+        // Show the empty option first
+        $(SubjectId).find('option[value=""]').show();
+        
+        // Check if there are matching options
+        if ($(SubjectId).find('option[data-class-id="' + dataClassId + '"]').length) {
+            $(SubjectId).find('option[data-class-id="' + dataClassId + '"]').show();
+            $(SubjectId).removeAttr('disabled');
+        } else {
+            // Show "no data found" option and disable dropdown
+            $(SubjectId).find('option[value="data-not-found"]').show();
+            $(SubjectId).val("data-not-found").attr('disabled', true);
+        }
     } else {
-        $(SubjectId).val("data-not-found").attr('disabled', true).show().trigger('change');
+        // No class selected - show "no data found" option
+        $(SubjectId).find('option[value="data-not-found"]').show();
+        $(SubjectId).val("data-not-found").attr('disabled', true);
     }
 }
+
+const getFeesClassOptionsList = (FeesId, classId) => {
+    $(FeesId).val("").removeAttr('disabled').show();
+    $(FeesId).find('option').hide();
+    if ($(FeesId).find('option[data-class-section-id="' + classId + '"]').length) {
+        $(FeesId).find('option[data-class-section-id="' + classId + '"]').show().trigger('change');
+    } else {
+        $(FeesId).val("").attr('disabled', false).show().trigger('change');
+    }
+}
+
+// const getOnlineOfflinePaymentOptionsList = (PaymentId, value) => {
+//     $(PaymentId).val("").removeAttr('disabled').show();
+//     $(PaymentId).find('option').hide();
+
+//     if (value == 1) {
+//         // Online
+//         value = 'stripe_razorpay';
+//     } else if (value == 2) {
+//         // Offline
+//         value = 'cash_cheque';
+//     } else {
+//         value = '';
+//     }
+
+//     if ($(PaymentId).find('option[value="' + value + '"]').length) {
+//         $(PaymentId).find('option[value="' + value + '"]').show().trigger('change');
+//     } else {
+//         $(PaymentId).val("").attr('disabled', false).show().trigger('change');
+//     }
+// }
 
 const getClassSubjectOptionsList = (SubjectId, classId) => {
     $(SubjectId).val("").removeAttr('disabled').show();
@@ -453,13 +584,24 @@ const getFilterSubjectOptionsList = (SubjectId, $this) => {
     }
 }
 
-const getExamSubjectOptionsList = (SubjectId, $this) => {
+const getExamSubjectOptionsList = (SubjectId, $this, class_section_id) => {
     $(SubjectId).val("").removeAttr('disabled').show();
     $(SubjectId).find('option').hide();
-    if ($(SubjectId).find('option[data-exam-id="' + $this.val() + '"]').length) {
-        $(SubjectId).find('option[data-exam-id="' + $this.val() + '"]').show();
+    if ($(SubjectId).find('option[data-exam-id="' + $this.val() + '"]').length && $(SubjectId).find('option[data-class-section-id="' + class_section_id + '"]').length) {
+        $(SubjectId).find('option[data-exam-id="' + $this.val() + '"][data-class-section-id="'+ class_section_id +'"]').show();
     } else {
         $(SubjectId).val("data-not-found").attr('disabled', true).show();
+    }
+}
+
+
+const getExamOptionsListByClass = (examId, $this) => {
+    $(examId).val("").removeAttr('disabled').show();
+    $(examId).find('option').hide();
+    if ($(examId).find('option[data-class-id="' + $this.val() + '"]').length) {
+        $(examId).find('option[data-class-id="' + $this.val() + '"]').show();
+    } else {
+        $(examId).val("data-not-found").attr('disabled', true).show();
     }
 }
 
@@ -470,6 +612,29 @@ const getExamOptionsList = (examId, $this) => {
         $(examId).find('option[data-session-year="' + $this.val() + '"]').show().trigger('change');
     } else {
         $(examId).val("data-not-found").attr('disabled', true).show();
+    }
+}
+
+const getExamClassOptionsList = (classSection) => {
+    var selectedOption = $('#filter_exam_id').find("option:selected");
+    let class_id = selectedOption.data("class-id");
+    $(classSection).val("").removeAttr('disabled').show();
+    $(classSection).find('option').hide();
+    if ($(classSection).find('option[data-class-id="' + class_id + '"]').length) {
+        $(classSection).find('option[data-class-id="' + class_id + '"]').show().trigger('change');
+    } else {
+        $(classSection).val("data-not-found").attr('disabled', true).show();
+    }
+}
+
+
+const getDashboardExamOptionsList = (examId, $this) => {
+    $(examId).val("").removeAttr('disabled').show();
+    $(examId).find('option').hide();
+    if ($(examId).find('option[data-session-year="' + $this.val() + '"]').length) {
+        $(examId).find('option[data-session-year="' + $this.val() + '"]').show().trigger('change');
+    } else {
+        $(examId).val("").attr('disabled', true).show();
     }
 }
 
@@ -492,7 +657,6 @@ function classValidation() {
         });
     })
 }
-
 
 function getContrastColor(bgColor) {
 
@@ -587,204 +751,36 @@ function formatMoney(n) {
     return n.toLocaleString().split(".")[0] + "." + n.toFixed(2).split(".")[1];
 }
 
-
 function expense_graph(months, data) {
-    var areaData = {
-        labels: months,
-        datasets: [{
-            label: '',
-            data: data,
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)'
-            ],
-            borderColor: [
-                'rgba(255,99,132,1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)'
-            ],
-            borderWidth: 1,
-            fill: true, // 3: no fill
-        }]
+    var options = {
+        series: [{
+            name: window.trans['Amount'],
+            data: isRTL() ? data.reverse() : data,
+        }],
+        chart: {
+            height: 380,
+            type: 'area',
+        },
+        dataLabels: {
+            enabled: false
+        },
+        stroke: {
+            curve: 'smooth'
+        },
+        tooltip: {
+
+        },
+        xaxis: {
+            categories: isRTL() ? months.reverse() : months,
+        },
+        yaxis: {
+            opposite:isRTL(),
+            min: 0
+        }
     };
-
-    var areaOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            filler: {
-                propagate: true,
-            },
-        },
-        legend: {
-            display: false
-        },
-        scales: {
-            yAxes: [{
-                ticks: {
-                    beginAtZero: true
-                }
-            }]
-        },
-
-    }
-
-    if ($("#expenseChart").length) {
-        var areaChartCanvas = $("#expenseChart").get(0).getContext("2d");
-        var areaChart = new Chart(areaChartCanvas, {
-            type: 'line',
-            data: areaData,
-            options: areaOptions
-        });
-    }
-}
-
-function class_attendance(classData) {
-    if ($("#class-section-attendance").length) {
-        var graphGradient = document.getElementById("class-section-attendance").getContext('2d');
-        var graphGradient2 = document.getElementById("class-section-attendance").getContext('2d');
-        var saleGradientBg = graphGradient.createLinearGradient(5, 0, 5, 100);
-        saleGradientBg.addColorStop(0, 'rgba(26, 115, 232, 0.18)');
-        saleGradientBg.addColorStop(1, 'rgba(26, 115, 232, 0.02)');
-        var saleGradientBg2 = graphGradient2.createLinearGradient(100, 0, 50, 150);
-        saleGradientBg2.addColorStop(0, 'rgba(0, 208, 255, 0.19)');
-        saleGradientBg2.addColorStop(1, 'rgba(0, 208, 255, 0.03)');
-
-        let borderColors = ['#2ED1B9', '#1F3BB3', '#52CDFF', '#FFAA99', '#FE8896', '#F6D55C', '#FFD608', '#A760FF', '#697481'];
-
-        let class_names = [];
-        let sectionWiseArray = [];
-        let classIndexMap = {};
-
-        classData.forEach((class_data) => {
-            class_data.section_data.forEach((sectionData) => {
-                const sectionName = sectionData.section_name;
-                const totalPresent = sectionData.total_present;
-
-                let existingSection = sectionWiseArray.find((section) => section.section_name === sectionName);
-
-                if (!existingSection) {
-                    existingSection = {
-                        section_name: sectionName,
-                        data: []
-                    };
-
-                    classData.forEach((class_data) => {
-                        existingSection.data.push({
-                            class_name: class_data.class_name,
-                            total_present: "0.00"
-                        });
-                    });
-
-                    sectionWiseArray.push(existingSection);
-                }
-
-                const classIndex = existingSection.data.findIndex((data) => data.class_name === class_data.class_name);
-                existingSection.data[classIndex].total_present = totalPresent;
-
-                if (!(class_data.class_name in classIndexMap)) {
-                    classIndexMap[class_data.class_name] = classIndex;
-                }
-            });
-        });
-
-        if (sectionWiseArray.length > 0) {
-            class_names = sectionWiseArray[0].data.map(item => item.class_name);
-
-            var datasets = sectionWiseArray.map((section, index) => ({
-                label: section.section_name,
-                data: section.data.map(item => item.total_present),
-                backgroundColor: saleGradientBg2,
-                borderColor: borderColors[index],
-                borderWidth: 1.5,
-                fill: true,
-                pointBorderWidth: 1,
-                pointRadius: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4],
-                pointHoverRadius: [2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2],
-                pointBorderColor: ['#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff', '#fff',],
-                pointBackgroundColor: borderColors[index],
-            }));
-        }
-
-
-        var salesTopData = {
-            labels: class_names,
-            datasets: datasets
-        };
-
-        var salesTopOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                yAxes: [{
-                    gridLines: {
-                        display: true,
-                        drawBorder: false,
-                        color: "#F0F0F0",
-                        zeroLineColor: '#F0F0F0',
-                    },
-                    ticks: {
-                        beginAtZero: false,
-                        autoSkip: true,
-                        // maxTicksLimit: 4,
-                        fontSize: 10,
-                        color: "#6B778C",
-                        min: 0,
-                        max: 100
-                    }
-                }],
-                xAxes: [{
-                    gridLines: {
-                        display: false,
-                        drawBorder: false,
-                    },
-                    ticks: {
-                        beginAtZero: false,
-                        autoSkip: true,
-                        maxTicksLimit: 50,
-                        fontSize: 10,
-                        color: "#6B778C"
-                    }
-                }],
-            },
-            legend: false,
-            legendCallback: function (chart) {
-                var text = [];
-                text.push('<div class="chartjs-legend"><ul>');
-                for (var i = 0; i < chart.data.datasets.length; i++) {
-                    //   console.log(chart.data.datasets[i]); // see what's inside the obj.
-                    text.push('<li>');
-                    text.push('<span class="legend-dots" style="background-color:' + chart.data.datasets[i].borderColor + '">' + '</span>');
-                    text.push(chart.data.datasets[i].label);
-                    text.push('</li>');
-                }
-                text.push('</ul></div>');
-                return text.join("");
-            },
-
-            elements: {
-                line: {
-                    tension: 0.4,
-                }
-            },
-            tooltips: {
-                backgroundColor: 'rgba(31, 59, 179, 1)',
-            }
-        }
-        var salesTop = new Chart(graphGradient, {
-            type: 'line',
-            data: salesTopData,
-            options: salesTopOptions
-        });
-        document.getElementById('performance-line-legend').innerHTML = salesTop.generateLegend();
-    }
+    $('#expenseChart').html('');
+    var chart = new ApexCharts(document.querySelector("#expenseChart"), options);
+    chart.render();
 }
 
 function getMinutes(minute) {
@@ -794,3 +790,384 @@ function getMinutes(minute) {
         return minute;
     }
 }
+
+function gender_ratio(boys, girls, total_students) {
+    var options = {
+        series: [boys, girls],
+        chart: {
+            height: 390,
+            type: 'radialBar',
+        },
+        plotOptions: {
+            radialBar: {
+                dataLabels: {
+                    name: {
+                        fontSize: '22px',
+                    },
+                    value: {
+                        fontSize: '16px',
+                    },
+                    total: {
+                        show: true,
+                        label: window.trans['total'],
+                        formatter: function (w) {
+                            // By default this function returns the average of all series. The below is just an example to show the use of custom formatter function
+                            // return 60
+                            return total_students
+                        }
+                    }
+                },
+            },
+        },
+
+        labels: [window.trans['male'], window.trans['female']],
+        legend: {
+            show: true,
+            floating: true,
+            position: 'top',
+            offsetX: 0,
+            offsetY: 340
+        },
+    };
+
+    var chart = new ApexCharts(document.querySelector("#gender-ratio-chart"), options);
+    chart.render();
+}
+
+function fees_details(data) {
+    var options = {
+        series: [data.fullPaidFees, data.partialPaidFees, data.unPaidFees],
+        chart: {
+            width: '100%',
+            type: 'donut',
+        },
+
+        dataLabels: {
+            enabled: true
+        },
+        responsive: [{
+            breakpoint: 480,
+            options: {
+                chart: {
+                    width: '100%',
+                },
+                legend: {
+                    show: true
+                }
+            }
+        }],
+        labels: [window.trans['paid'], window.trans['Partial Paid'], window.trans['unpaid']],
+        legend: {
+            show: true,
+            position: 'bottom',
+            offsetY: 0,
+            height: 20,
+        },
+        colors: ['#1BCFB4', '#198AE3', '#FE7C96']
+    };
+
+    var chart = new ApexCharts(document.querySelector("#fees_details_chart"), options);
+    chart.render();
+}
+
+function class_attendance(section, data)
+{
+    var options = {
+        series: [
+          {
+            name: window.trans['attendance'],
+            data: data
+          }
+        ],
+        chart: {
+          height: 400,
+          type: "bar"
+        },
+        plotOptions: {
+          bar: {
+            borderRadius: 10,
+            dataLabels: {
+              position: "top" // top, center, bottom
+            }
+          }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: function (val) {
+            return val + "%";
+          },
+          offsetY: -20,
+          style: {
+            fontSize: "12px",
+            colors: ["#304758"]
+          }
+        },
+      
+        xaxis: {
+          categories: section,
+          position: "bottom",
+          axisBorder: {
+            show: false
+          },
+          axisTicks: {
+            show: true
+          },
+          crosshairs: {
+            fill: {
+              type: "gradient",
+              gradient: {
+                colorFrom: "#D8E3F0",
+                colorTo: "#BED1E6",
+                stops: [0, 100],
+                opacityFrom: 0.4,
+                opacityTo: 0.5
+              }
+            }
+          },
+          tooltip: {
+            enabled: true
+          }
+        },
+        yaxis: {
+          axisBorder: {
+            show: false
+          },
+          axisTicks: {
+            show: false
+          },
+          labels: {
+            show: true,
+            formatter: function (val) {
+              return val + "%";
+            },
+            
+          },
+          min:0,
+          max:100,
+          opposite: isRTL()
+        },
+        title: {
+          
+        }
+      };
+      
+      $('#attendanChart').html('');
+      var chart = new ApexCharts(document.querySelector("#attendanChart"), options);
+      chart.render();
+      
+}
+
+
+function subscription_transaction(labels, data)
+{
+    var options = {
+        series: [
+          {
+            name: window.trans['Amount'],
+            data: data
+          }
+        ],
+        chart: {
+          height: 400,
+          type: "bar"
+        },
+        plotOptions: {
+          bar: {
+            borderRadius: 10,
+            dataLabels: {
+              position: "top" // top, center, bottom
+            }
+          }
+        },
+        dataLabels: {
+          enabled: true,
+          formatter: function (val) {
+            return val.toFixed(2);
+          },
+          offsetY: -20,
+          style: {
+            fontSize: "12px",
+            colors: ["#304758"]
+          }
+        },
+      
+        xaxis: {
+          categories: labels,
+          position: "bottom",
+          axisBorder: {
+            show: false
+          },
+          axisTicks: {
+            show: true
+          },
+          crosshairs: {
+            fill: {
+              type: "gradient",
+              gradient: {
+                colorFrom: "#D8E3F0",
+                colorTo: "#BED1E6",
+                stops: [0, 100],
+                opacityFrom: 0.4,
+                opacityTo: 0.5
+              }
+            }
+          },
+          tooltip: {
+            enabled: true
+          }
+        },
+        yaxis: {
+          axisBorder: {
+            show: false
+          },
+          axisTicks: {
+            show: false
+          },
+          labels: {
+            show: true,
+          },
+          min:0,
+            opposite: isRTL(),
+            labels: {
+                show: true,
+                formatter: function (val) {
+                    return val.toFixed(2);
+                }
+            }
+
+        },
+        
+      };
+      
+      $('#subscriptionTransactionChart').html('');
+      var chart = new ApexCharts(document.querySelector("#subscriptionTransactionChart"), options);
+      chart.render(); 
+}
+function addon_graph(labels, data) {
+    var options = {
+        series: [
+            {
+                name: window.trans['No'],
+                data: data
+            }
+        ],
+        chart: {
+            height: 400,
+            type: "bar"
+        },
+        plotOptions: {
+            bar: {
+                borderRadius: 10,
+                dataLabels: {
+                    position: "top" // top, center, bottom
+                }
+            }
+        },
+        dataLabels: {
+            enabled: true,
+
+            offsetY: -20,
+            style: {
+                fontSize: "12px",
+                colors: ["#304758"]
+            }
+        },
+
+        xaxis: {
+            categories: labels,
+            position: "bottom",
+            axisBorder: {
+                show: false
+            },
+            axisTicks: {
+                show: true
+            },
+            crosshairs: {
+                fill: {
+                    type: "gradient",
+                    gradient: {
+                        colorFrom: "#D8E3F0",
+                        colorTo: "#BED1E6",
+                        stops: [0, 100],
+                        opacityFrom: 0.4,
+                        opacityTo: 0.5
+                    }
+                }
+            },
+            tooltip: {
+                enabled: true
+            }
+        },
+        yaxis: {
+            axisBorder: {
+                show: false
+            },
+            axisTicks: {
+                show: false
+            },
+            labels: {
+                show: true,
+            },
+            min: 0,
+            opposite: isRTL()
+        },
+        title: {
+
+        }
+    };
+
+    $('#addonChart').html('');
+    var chart = new ApexCharts(document.querySelector("#addonChart"), options);
+    chart.render();
+}
+
+function package_graph(labels, data) {
+    var options = {
+        series: data,
+        chart: {
+            width: "100%",
+            type: "donut",
+            height: 450,
+        },
+        labels: labels,
+
+        plotOptions: {
+            donut: {
+                dataLabels: {
+                    offset: -5
+                }
+            }
+        },
+        dataLabels: {
+            formatter(val) {
+                return [val.toFixed(1) + "%"];
+            }
+        },
+        legend: {
+            show: true,
+            position: 'bottom'
+        },
+        colors: ['#008FFB', '#00E396', '#FEB019', '#FF4560', '#775DD0', '#546E7A', '#E308F7', '#FF8400', '#00F5FE', '#0DFF00', '#AC40FF', '#F200FF']
+    };
+
+    $('#packageChart').html('');
+    var chart = new ApexCharts(document.querySelector("#packageChart"), options);
+    chart.render();
+}
+
+
+
+function generateRandomColors(count) {
+    var colors = [];
+    var letters = '0123456789ABCDEF';
+    while (colors.length < count) {
+      var color = '#';
+      for (var j = 0; j < 6; j++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      if (!colors.includes(color)) {
+        colors.push(color);
+      }
+    }
+    return colors;
+  } 

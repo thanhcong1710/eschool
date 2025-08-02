@@ -26,7 +26,7 @@
                                     <textarea id="tinymce_message" name="data" id="data" required placeholder="{{ __('school'). ' ' .__('terms_condition') }}">{{ $data ?? '' }}</textarea>
                                 </div>
                             </div>
-                            <input class="btn btn-theme" type="submit" value="Submit">
+                            <input class="btn btn-theme float-right" type="submit" value="{{ __('submit') }}">
                         </form>
                     </div>
                 </div>

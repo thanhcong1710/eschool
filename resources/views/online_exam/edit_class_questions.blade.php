@@ -94,6 +94,7 @@
 @section('script')
 <script>
     $(document).ready(function () {
+        
         // Initialize the options repeater with their values
         var optionsList = [
             @foreach($onlineExamQuestion->options as $option)
@@ -106,23 +107,27 @@
 
         // Add the answers to be selected
         var selectedOptions = [];
-        @foreach($onlineExamQuestion->options as $key => $option)
-            {{$key++}}
-            $("#remove-option-{{$key}}").attr('data-id',{{$option->id}});
-            if({{$option->is_answer}}){
-                selectedOptions.push({{$key}});
-            }
+        @if($onlineExamQuestion->options->isNotEmpty())
+            @foreach($onlineExamQuestion->options as $key => $option)
+                {{$key++}}
+                $("#remove-option-{{$key}}").attr('data-id',{{$option->id}});
+                if({{$option->is_answer}}){
+                    selectedOptions.push({{$key}});
+                }
 
-            // Initialize Option
-            CKEDITOR.replace("option-{{ $key }}",{
-                mathJaxLib: '//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML',
-                extraPlugins: 'mathjax',
-                height: 100
-            });
+                // Initialize Option
+                CKEDITOR.replace("option-{{ $key }}",{
+                    mathJaxLib: '//cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS_HTML',
+                    extraPlugins: 'mathjax',
+                    height: 100
+                });
 
-            // Add Data of Option to Initialized Option
-            CKEDITOR.instances["option-{{ $key }}"].setData(@json($option->option));
-        @endforeach
+                // Add Data of Option to Initialized Option
+                CKEDITOR.instances["option-{{ $key }}"].setData(@json($option->option));
+            @endforeach
+        @else
+            createCkeditor();
+        @endif
         $("#answer_select").val(selectedOptions).trigger('change');
     });
 

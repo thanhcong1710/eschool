@@ -20,7 +20,7 @@ $(function () {
         let questions = $(this).bootstrapTable('getSelections');
         let li = ''
         $.each(questions, function (index, value) {
-            li = $('<div class="list-group"><input type="hidden" name="assign_questions[' + value.question_id + '][question_id]" value="' + value.question_id + '"><li id="q' + value.question_id + '" class="list-group-item justify-content-between align-items-center ui-state-default list-group-item-secondary m-2">' + value.question_id + ". " + value.question + ' <span class="text-right row mx-0"><input type="number" class="list-group-item col-md-3 col-sm-12 form-control-sm mr-2 mb-2" name="assign_questions[' + value.question_id + '][marks]" placeholder="' + trans['enter_marks'] + '"><a class="btn btn-danger btn-sm remove-row mb-2" data-id="' + value.question_id + '"><i class="fa fa-times" aria-hidden="true"></i></a></span></li></div>');
+            li = $('<div class="list-group"><input type="hidden" name="assign_questions[' + value.question_id + '][question_id]" value="' + value.question_id + '"><li id="q' + value.question_id + '" class="list-group-item justify-content-between align-items-center ui-state-default list-group-item-secondary m-2">' + value.question_id + ". " + value.question + ' <span class="text-right row mx-0"><input type="number" min="1" class="list-group-item col-md-3 col-sm-12 form-control-sm mr-2 mb-2" name="assign_questions[' + value.question_id + '][marks]" placeholder="' + trans['enter_marks'] + '"><a class="btn btn-danger btn-sm remove-row mb-2" data-id="' + value.question_id + '"><i class="fa fa-times" aria-hidden="true"></i></a></span></li></div>');
             let pasteItem = checkList("sortable-row", li, row.question_id);
             if (!pasteItem) {
                 $("#sortable-row").append(li);
@@ -55,17 +55,30 @@ $(function () {
         $(this).parent().find('.form-control').val($(this).val().replace(/C:\\fakepath\\/i, ''));
     });
 
+    let layout_direction = 'ltl';
+    if(isRTL()) {
+        layout_direction = 'rtl';
+    } else {
+        layout_direction = 'ltl';
+    }
+
     if ($('#tinymce_message').length) {
         tinymce.init({
-            height: "400",
+            directionality : layout_direction,
+            height: "500",
             selector: '#tinymce_message',
+            relative_urls: false,
+            remove_script_host: false,
             menubar: 'file edit view formate tools',
             toolbar: [
                 'styleselect fontselect fontsizeselect',
-                'undo redo | cut copy paste | bold italic | alignleft aligncenter alignright alignjustify',
-                'bullist numlist | outdent indent | blockquote autolink | lists |  code'
+                'undo redo | cut copy paste | bold italic | alignleft aligncenter alignright alignjustify | table | image | fullscreen',
+                'bullist numlist | outdent indent | blockquote autolink | lists | fontfamily | fontsize | code | preview'
             ],
-            plugins: 'autolink link image lists code'
+            content_style: "@import url('https://fonts.googleapis.com/css2?family=Pinyon%20Script:wght@900&family=Pinyon%20Script&display=swap'); body { font-family: 'Lato', sans-serif; } h1,h2,h3,h4,h5,h6 { font-family: 'Pinyon%20Script', sans-serif; }",
+            font_family_formats: "Arial Black=arial black,avant garde; Courier New=courier new,courier; Lato=lato; Pinyon Script=Pinyon Script;",
+            plugins: 'autolink link image lists code table fullscreen preview',
+            font_size_formats: '8pt 10pt 12pt 14pt 16pt 18pt 24pt 28pt 36pt 48pt',
         });
     }
 
@@ -120,6 +133,7 @@ $(function () {
             todayHighlight: true,
             format: "dd-mm-yyyy",
             endDate: maxDate,
+            rtl: isRTL()
         });
     });
 
@@ -132,6 +146,7 @@ $(function () {
             todayHighlight: true,
             format: "dd-mm-yyyy",
             startDate: minDate,
+            rtl: isRTL()
         });
     });
 
@@ -149,6 +164,7 @@ $(function () {
             enableOnReadonly: false,
             todayHighlight: true,
             format: "dd-mm-yyyy",
+            rtl: isRTL()
         });
     });
 
@@ -168,7 +184,22 @@ $(function () {
         $(this).ekkoLightbox();
     });
 
+    $(function () {
+        $('[data-toggle="tooltip"]').tooltip()
+    })
+});
 
+// date range picker
+$(function() {
+    $(".daterange").daterangepicker({
+        opens: 'right',
+        autoUpdateInput: false,
+    }).on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('DD-MM-YYYY') + ' - ' + picker.endDate.format('DD-MM-YYYY'));
+        $('#table_list').bootstrapTable('refresh');
+    }).on('cancel.daterangepicker', function(ev, picker) {
+        $(this).val('');
+    });
 });
 
 // $('.edit-class-teacher-form').on('submit', function (e) {
@@ -192,6 +223,14 @@ $(function () {
 //     formAjaxRequest('POST', url, data, formElement, submitButtonElement, successCallback);
 // })
 
+// 'Start-trial-Pacakge' Display and Hide
+$("#trialBtn").on("click", function() {
+    $("#trialCheckboxContainer").show();
+});
+
+$("#staticBackdrop").on("hidden.bs.modal", function () {
+    $("#trialCheckboxContainer").hide();
+});
 
 $(document).on('change', '.file_type', function () {
     let type = $(this).val();
@@ -265,7 +304,8 @@ const addNewLessonTopicFileRepeater = $('.files_data').repeater({
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
-                confirmButtonText: window.trans["yes_delete"]
+                confirmButtonText: window.trans["yes_delete"],
+                cancelButtonText: window.trans["Cancel"]
             }).then((result) => {
                 if (result.isConfirmed) {
                     let url = baseUrl + '/file/delete/' + file_id;
@@ -289,6 +329,41 @@ const addNewLessonTopicFileRepeater = $('.files_data').repeater({
             $(this).slideUp(deleteElement);
         }
     }
+});
+
+$(document).on('click', '.remove-gallery-image', function (e) {
+    e.preventDefault();
+    var $this = $(this);
+    var file_id = $(this).data('id');
+
+    Swal.fire({
+        title: window.trans['Are you sure'],
+        text: window.trans['You wont be able to revert this'],
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: window.trans["Yes, Change it"],
+        cancelButtonText: window.trans["Cancel"]
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let url = baseUrl + '/gallery/file/delete/' + file_id;
+            let data = null;
+
+            function successCallback(response) {
+                // $this.parent().remove();
+                $this.parent().slideUp(500);
+                $('#table_list').bootstrapTable('refresh');
+                showSuccessToast(response.message);
+            }
+
+            function errorCallback(response) {
+                showErrorToast(response.message);
+            }
+
+            ajaxRequest('DELETE', url, data, null, successCallback, errorCallback);
+        }
+    })
 });
 
 $('#topic_class_section_id').on('change', function () {
@@ -340,6 +415,30 @@ $('#edit_resubmission_allowed').on('change', function () {
     }
 })
 
+$('.checkbox_add_url').on('change', function () {
+    if ($(this).is(':checked')) {
+        $(this).val(1);      
+        // $('#fileOption').hide(500);
+        $('#add_url').show(500);
+    } else {
+        $(this).val(0);
+        // $('#fileOption').show(500);
+        $('#add_url').hide(500);
+    }
+});
+
+$('.edit_checkbox_add_url').on('change', function () {
+    if ($(this).is(':checked')) {
+        $(this).val(1);      
+        // $('#fileOption').hide(500);
+        $('#edit_add_url').show(500);
+    } else {
+        $(this).val(0);
+        // $('#fileOption').show(500);
+        $('#edit_add_url').hide(500);
+    }
+});
+
 $('#edit_topic_class_section_id').on('change', function () {
     let html = "<option value=''>--Select Lesson--</option>";
     $('#topic-lesson-id').html(html);
@@ -374,13 +473,14 @@ $(document).on('click', '.remove-assignment-file', function (e) {
     let file_id = $(this).data('id');
     // TODO : Remove this and use deletepopup function
     Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
+        title: window.trans['Are you sure'],
+        text: window.trans['You wont be able to revert this'],
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
+        confirmButtonText: window.trans['yes_delete'],
+        cancelButtonText: window.trans["Cancel"]
     }).then((result) => {
         if (result.isConfirmed) {
             let url = baseUrl + '/announcement/file/delete/' + file_id;
@@ -403,7 +503,7 @@ $(document).on('click', '.remove-assignment-file', function (e) {
 
 select2Search($(".edit-school-admin-search"), baseUrl + "/schools/admin/search", null, 'Search for school admin Email', Select2SearchDesignTemplate, function (repo) {
     if (!repo.text) {
-        $('#edit_admin_email').val(repo.email);
+        $('#edit_admin_email').val(repo.id);
         $('#edit-admin-first-name').val(repo.first_name);
         $('#edit-admin-last-name').val(repo.last_name);
         $('#edit-admin-contact').val(repo.mobile);
@@ -479,6 +579,37 @@ select2Search($(".edit-guardian-search"), baseUrl + "/guardian/search", null, 'S
     }
     return repo.email || repo.text;
 });
+$(document).on('submit', '.email-template-setting-form', function (e) {
+    e.preventDefault();
+    let formData = new FormData(this);
+    let data = formData.get('data');
+    let name = $('#name').val();
+
+    let email_template_school_registration = formData.get('email_template_school_registration');
+    let school_reject_template = formData.get('school_reject_template');
+
+    let submitButtonElement = $(this).find(':submit');
+    let url = $(this).attr('action');
+    let submitButtonText = submitButtonElement.val();
+    $.ajax({
+        type: "PUT",
+        url: url,
+        data: {email_template_school_registration: email_template_school_registration, school_reject_template: school_reject_template},
+        beforeSend: function () {
+            submitButtonElement.val('Please Wait...').attr('disabled', true);
+        },
+        success: function (response) {
+            if (response.error == false) {
+                showSuccessToast(response.message);
+                submitButtonElement.val(submitButtonText).attr('disabled', false);
+            } else {
+                submitButtonElement.val(submitButtonText).attr('disabled', false);
+                showErrorToast(response.message);
+            }
+        }
+
+    });
+});
 $(document).on('submit', '.setting-form', function (e) {
     e.preventDefault();
     let formData = new FormData(this);
@@ -499,6 +630,37 @@ $(document).on('submit', '.setting-form', function (e) {
                 showSuccessToast(response.message);
                 submitButtonElement.val(submitButtonText).attr('disabled', false);
             } else {
+                submitButtonElement.val(submitButtonText).attr('disabled', false);
+                showErrorToast(response.message);
+            }
+        }
+
+    });
+});
+
+$(document).on('submit', '.school-email-template', function (e) {
+    e.preventDefault();
+    let formData = new FormData(this);
+    let staff_data = formData.get('staff_data');
+    let parent_data = formData.get('parent_data');
+    let reject_email_data = formData.get('reject_email_data');
+    let template = formData.get('template');
+    let submitButtonElement = $(this).find(':submit');
+    let url = $(this).attr('action');
+    let submitButtonText = submitButtonElement.val();
+    $.ajax({
+        type: "PUT",
+        url: url,
+        data: {staff_data: staff_data, parent_data: parent_data, reject_email_data:reject_email_data, template: template},
+        beforeSend: function () {
+            submitButtonElement.val('Please Wait...').attr('disabled', true);
+        },
+        success: function (response) {
+            if (response.error == false) {
+                submitButtonElement.val(submitButtonText).attr('disabled', false);
+                showSuccessToast(response.message);
+            } else {
+                submitButtonElement.val(submitButtonText).attr('disabled', false);
                 showErrorToast(response.message);
             }
         }
@@ -776,13 +938,14 @@ $(document).on('click', '.remove-paid-optional-fees', function (e) {
     e.preventDefault();
     // TODO : Remove this and use deletepopup function
     Swal.fire({
-        title: 'Are you sure?',
-        text: "You won't be able to revert this!",
+        title: window.trans['Are you sure'],
+        text: window.trans['You wont be able to revert this'],
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
+        confirmButtonText: window.trans['yes_delete'],
+        cancelButtonText: window.trans["Cancel"]
     }).then((result) => {
         if (result.isConfirmed) {
             // let amount = $(this).data("amount");
@@ -841,19 +1004,97 @@ $('#edit-fees-paid-form').on('submit', function (e) {
 $('#razorpay_status').on('change', function (e) {
     e.preventDefault();
     if ($(this).val() == 1) {
+        // Disable others when Razorpay is enabled
         $('#stripe_status').val(0);
-    } else {
-        $('#stripe_status').val(1);
+        $('#paystack_status').val(0);
+        $('#flutterwave_status').val(0);
+        $('#bank_transfer_status').val(0);
     }
 });
+
 $('#stripe_status').on('change', function (e) {
     e.preventDefault();
     if ($(this).val() == 1) {
+        // Disable others when Stripe is enabled
         $('#razorpay_status').val(0);
-    } else {
-        $('#razorpay_status').val(1);
+        $('#paystack_status').val(0);
+        $('#flutterwave_status').val(0);
+        $('#bank_transfer_status').val(0);
     }
 });
+
+$('#paystack_status').on('change', function (e) {
+    e.preventDefault();
+    if ($(this).val() == 1) {
+        // Disable others when Paystack is enabled
+        $('#razorpay_status').val(0);
+        $('#stripe_status').val(0);
+        $('#flutterwave_status').val(0);
+        $('#bank_transfer_status').val(0);
+    }
+});
+
+$('#flutterwave_status').on('change', function (e) {
+    e.preventDefault();
+    if ($(this).val() == 1) {
+        // Disable others when Flutterwave is enabled
+        $('#razorpay_status').val(0);
+        $('#stripe_status').val(0);
+        $('#paystack_status').val(0);
+        $('#bank_transfer_status').val(0);
+    }
+});
+
+$('#bank_transfer_status').on('change', function (e) {
+    e.preventDefault();
+    if ($(this).val() == 1) {
+        $('#razorpay_status').val(0);
+        $('#stripe_status').val(0);
+    } else {
+        $('#bank_transfer_status').val(1);
+    }
+});
+
+// Paystack toggle for new UI
+$(document).ready(function() {
+    $('#Paystack').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#PaystackForm').removeClass('d-none');
+            
+            // Disable other payment methods
+            $('#stripe_status').val(0);
+            $('#razorpay_status').val(0);
+            $('#flutterwave_status').val(0);
+            $('#bank_transfer_status').val(0);
+            
+            // Uncheck other toggles
+            $('#Flutterwave').prop('checked', false);
+            $('#FlutterwaveForm').addClass('d-none');
+        } else {
+            $('#PaystackForm').addClass('d-none');
+        }
+    });
+    
+    // Flutterwave toggle for new UI
+    $('#Flutterwave').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#FlutterwaveForm').removeClass('d-none');
+            
+            // Disable other payment methods
+            $('#stripe_status').val(0);
+            $('#razorpay_status').val(0);
+            $('#paystack_status').val(0);
+            $('#bank_transfer_status').val(0);
+            
+            // Uncheck other toggles
+            $('#Paystack').prop('checked', false);
+            $('#PaystackForm').addClass('d-none');
+        } else {
+            $('#FlutterwaveForm').addClass('d-none');
+        }
+    });
+});
+
 $('#assign-roll-no-form').on('submit', function (e) {
     e.preventDefault();
     Swal.fire({
@@ -863,7 +1104,8 @@ $('#assign-roll-no-form').on('submit', function (e) {
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: window.trans["Yes, Change it"]
+        confirmButtonText: window.trans["Yes, Change it"],
+        cancelButtonText: window.trans["Cancel"]
     }).then((result) => {
         if (result.isConfirmed) {
             let formElement = $(this);
@@ -1126,7 +1368,8 @@ $(document).on('click', '.remove-row', function () {
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: window.trans["yes_delete"]
+            confirmButtonText: window.trans["yes_delete"],
+            cancelButtonText: window.trans["Cancel"]
         }).then((result) => {
             if (result.isConfirmed) {
                 let url = baseUrl + '/online-exam/remove-choiced-question/' + edit_id;
@@ -1260,9 +1503,9 @@ $(document).on('click', '.add-new-edit-eoption', function (e) {
     let select_answer_option = '<option value="new' + $.trim(inner_html) + '" class="edit_answer_option">' + window.trans["option"] + ' ' + inner_html + '</option>'
     $('.edit_answer_select').append(select_answer_option)
 });
-$('input[type="file"]').on('change', function () {
-    $(this).closest('form').valid();
-})
+// $('input[type="file"]').on('change', function () {
+//     $(this).closest('form').valid();
+// })
 select2Search($(".edit-admin-search"), baseUrl + "/schools/admin/search", null, window.trans["search_admin_email"], Select2SearchDesignTemplate, function (repo) {
     if (!repo.text) {
         $('#edit-admin-first-name').val(repo.first_name);
@@ -1430,13 +1673,14 @@ var editDefaultValuesRepeater = $('.edit-default-values-section').repeater({
     hide: function (deleteElement) {
         // TODO : Add translation here
         Swal.fire({
-            title: 'Are you sure?',
-            text: "You won't to delete this element?",
+            title: window.trans['Are you sure'],
+            text: window.trans['You wont to delete this element'],
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#3085d6',
             cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
+            confirmButtonText: window.trans["yes_delete"],
+            cancelButtonText: window.trans["Cancel"]
         }).then((result) => {
             if (result.isConfirmed) {
                 $(this).slideUp(deleteElement);
@@ -1476,7 +1720,6 @@ const coreSubject = $('.core-subject-repeater').repeater({
 const electiveSubjectGroupRepeater = $('.elective-subject-group-repeater').repeater({
     initEmpty: true,
     show: function () {
-        // console.log('outer show function');
         $(this).slideDown();
         if ($(this).children('.elective-subject-repeater').children('.row').children().length == 1) {
             // Trigger Click manually to generate second optional subject in list by default
@@ -1496,7 +1739,6 @@ const electiveSubjectGroupRepeater = $('.elective-subject-group-repeater').repea
     },
     hide: function (deleteElement) {
         if ($(this).hasClass('elective-subject-group')) {
-            // console.log("outer hide function");
             let class_subject_group_id = $(this).find('.class_subject_group_id').val();
             if (class_subject_group_id) {
                 let url = baseUrl + '/class/subject-group/' + class_subject_group_id;
@@ -1513,7 +1755,6 @@ const electiveSubjectGroupRepeater = $('.elective-subject-group-repeater').repea
     repeaters: [{
         selector: '.elective-subject-repeater',
         show: function () {
-            // console.log('inner show function');
             $(this).fadeIn();
             $(this).parent().find('.or-div').show();
             $(this).find('.or-div').hide();
@@ -1525,7 +1766,6 @@ const electiveSubjectGroupRepeater = $('.elective-subject-group-repeater').repea
             $('.semesters').trigger('change');
         },
         hide: function (deleteElement) {
-            // console.log('inner hide function called');
             if ($(this).siblings().length <= 2) {
                 $(this).parent().find('.remove-elective-subject').attr('disabled', true);
             }
@@ -1572,7 +1812,8 @@ $(document).on('click', '.reset_password', function (e) {
         showCancelButton: true,
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
-        confirmButtonText: window.trans["Yes, Change it"]
+        confirmButtonText: window.trans["Yes, Change it"],
+        cancelButtonText: window.trans["Cancel"]
     }).then((result) => {
         if (result.isConfirmed) {
             $.ajax({
@@ -1763,7 +2004,6 @@ const examTimetableRepeater = $('.exam-timetable-content').repeater({
 });
 
 // $('.start-time').on("change", function () {
-//     console.log('hello');
 //     $(this).find('.timetable-date').trigger("change")
 // });
 
@@ -1795,6 +2035,16 @@ const examTimetableRepeater = $('.exam-timetable-content').repeater({
 // });
 
 /*Create Timetable Page*/
+
+function isRTL() {
+    var dir = $('html').attr('dir');
+    if (dir === 'rtl') {
+        return true;
+    } else {
+        return false;
+    }
+    return false;
+}
 $(document).on('change', '.timetable_start_time', function () {
     let $this = $(this);
     let end_time = $(this).parent().siblings().children('.timetable_end_time');
@@ -1821,10 +2071,33 @@ if (containerEl !== null) {
     });
 
 }
+let layout_direction = 'ltl';
+if (isRTL()) {
+    layout_direction = 'rtl'
+} else {
+    layout_direction = 'ltl'
+}
+
+// Modify the helper function
+function checkSubjectTypeCompatibility(existingEvent, newEvent) {
+    // Get subject type from extendedProps
+    let existingSubjectType = existingEvent.extendedProps?.subject_type;
+    let newSubjectType = newEvent.extendedProps?.subject_type;
+  
+    // If either subject is not elective, don't allow overlap
+    if (existingSubjectType !== 'Elective' || newSubjectType !== 'Elective') {
+        return false;
+    }
+
+    // If both are elective, they are compatible
+    return true;
+}
+
 if (calendarEl !== null) {
     var createTimetable = new FullCalendar.Calendar(calendarEl, {
         initialView: 'timeGridWeek',
         contentHeight: 1500,
+        direction: layout_direction,
         headerToolbar: {
             start: '', // will normally be on the left. if RTL, will be on the right
             center: '',
@@ -1838,11 +2111,11 @@ if (calendarEl !== null) {
         },
         slotMinTime: "00:00:00",
         slotMaxTime: "00:00:00",
-        hiddenDays: [0],
         allDaySlot: false,
+        firstDay: 1,
         expandRows: true,
         slotDuration: "01:00:00",
-        // snapDuration: "00:10:00",
+        snapDuration: "00:01:00",
         dayHeaderFormat: {
             weekday: 'short'
         },
@@ -1851,12 +2124,17 @@ if (calendarEl !== null) {
         eventDurationEditable: true,
         eventResizableFromStart: true,
         eventDidMount: function (event) {
-            $(event.el).find('.fc-event-main .fc-event-main-frame').append("<div class='text-right'><span class='fa fa-times remove-timetable' data-id=" + event.event.id + "></span></div>");
+            // console.log('Event mounted:', event.event.id);
+            // console.log('Subject type:', event.event.extendedProps.subject_type);
+            let subjectType = event.event.extendedProps.subject_type;   
+            $(event.el).find('.fc-event-main .fc-event-main-frame')
+            .append("<div class='text-right'><span class='fa fa-times remove-timetable' data-id=" + event.event.id + "></span></div>")
+            .attr('data-subject-type', subjectType);
         },
         eventReceive: function (event) {
-
             let subject_teacher_id = $(event.draggedEl).data('subject_teacher_id');
             let subject_id = $(event.draggedEl).data('subject_id');
+            let subject_type = $(event.draggedEl).data('subject-type');
             let note = $(event.draggedEl).data('note');
             let class_section_id = $('#class_section_id').val();
             let semester_id = $('#semester_id').val();
@@ -1865,12 +2143,45 @@ if (calendarEl !== null) {
 
             let end_time = new Date(event.event.end);
             let endTime24Hr = end_time.getHours() + ":" + end_time.getMinutes() + ":" + end_time.getSeconds();
+
+            // Check for overlapping events
+            let overlappingEvents = createTimetable.getEvents().filter(function(existingEvent) {
+                if (existingEvent.id === event.event.id) return false;
+                
+                let existingDate = new Date(existingEvent.start);
+                if (existingDate.getDay() !== date.getDay()) return false;
+                
+                let existingStart = new Date(existingEvent.start);
+                let existingEnd = new Date(existingEvent.end);
+                let newStart = new Date(event.event.start);
+                let newEnd = new Date(event.event.end);
+                
+                let hasOverlap = (newStart < existingEnd && newEnd > existingStart);
+                
+                if (hasOverlap) {
+                    // Add subject type to the event properties
+                    event.event.setExtendedProp('subject_type', subject_type);
+                    return !checkSubjectTypeCompatibility(existingEvent, event.event);
+                }
+                
+                return false;
+            });
+
+            if (overlappingEvents.length > 0) {
+                event.event.remove();
+                showErrorToast(window.trans["Only elective subjects can be scheduled in the same time slot as other elective subjects."]);
+                return;
+            }
+
             let data = new FormData();
             if (subject_teacher_id)
                 data.append('subject_teacher_id', subject_teacher_id);
 
             if (subject_id)
                 data.append('subject_id', subject_id);
+
+            if (subject_type)
+                data.append('subject_type', subject_type);
 
             data.append('day', days[date.getDay()]);
             data.append('start_time', startTime24Hr);
@@ -1888,6 +2199,9 @@ if (calendarEl !== null) {
                     end: event.event.end,
                     backgroundColor: event.event.backgroundColor,
                     textColor: getContrastColor(event.event.backgroundColor),
+                    extendedProps: {
+                        subject_type: subject_type // Add subject type to the event properties
+                    }
                 });
             }, function () {
                 event.event.remove();
@@ -1896,12 +2210,41 @@ if (calendarEl !== null) {
         eventDrop: function (event) {
             // This event will be called when event will be dragged from one duration to another
             let date = new Date(event.event.start);
-            // getMinutes
-            // let startTime24Hr = date.getHours() + ":" + date.getMinutes() + ":" + date.getSeconds()+'0';
             let startTime24Hr = date.getHours() + ":" + getMinutes(date.getMinutes()) + ":" + date.getSeconds() + '0';
             let end_time = new Date(event.event.end);
             let endTime24Hr = end_time.getHours() + ":" + getMinutes(end_time.getMinutes()) + ":" + end_time.getSeconds() + '0';
             let timetable_id = event.event.id;
+
+            // Check for overlapping events
+            let overlappingEvents = createTimetable.getEvents().filter(function(existingEvent) {
+                // Skip the current event being dragged
+                if (existingEvent.id === event.event.id) return false;
+                
+                // Check if events are on the same day
+                let existingDate = new Date(existingEvent.start);
+                if (existingDate.getDay() !== date.getDay()) return false;
+                
+                // Check for time overlap
+                let existingStart = new Date(existingEvent.start);
+                let existingEnd = new Date(existingEvent.end);
+                let newStart = new Date(event.event.start);
+                let newEnd = new Date(event.event.end);
+                
+                let hasOverlap = (newStart < existingEnd && newEnd > existingStart);
+                
+                if (hasOverlap) {
+                    return !checkSubjectTypeCompatibility(existingEvent, event.event);
+                }
+                
+                return false;
+            });
+
+            if (overlappingEvents.length > 0) {
+                event.revert();
+                showErrorToast(window.trans["Only elective subjects can be scheduled in the same time slot as other elective subjects."]);
+                return;
+            }
+
             let data = new FormData();
             data.append('day', days[date.getDay()]);
             data.append('start_time', startTime24Hr);
@@ -1909,7 +2252,6 @@ if (calendarEl !== null) {
             data.append('_method', 'PUT');
             ajaxRequest('POST', baseUrl + '/timetable/' + timetable_id, data, null, null, function () {
                 showErrorToast(window.trans["The school hours dont match the current time slots Please select a valid time"]);
-
             })
         },
         eventResize: function (event) {
@@ -1918,6 +2260,37 @@ if (calendarEl !== null) {
             let end_time = new Date(event.event.end);
             let endTime24Hr = end_time.getHours() + ":" + getMinutes(end_time.getMinutes()) + ":" + end_time.getSeconds() + '0';
             let timetable_id = event.event.id;
+
+            // Check for overlapping events
+            let overlappingEvents = createTimetable.getEvents().filter(function(existingEvent) {
+                // Skip the current event being resized
+                if (existingEvent.id === event.event.id) return false;
+                
+                // Check if events are on the same day
+                let existingDate = new Date(existingEvent.start);
+                if (existingDate.getDay() !== date.getDay()) return false;
+                
+                // Check for time overlap
+                let existingStart = new Date(existingEvent.start);
+                let existingEnd = new Date(existingEvent.end);
+                let newStart = new Date(event.event.start);
+                let newEnd = new Date(event.event.end);
+                
+                let hasOverlap = (newStart < existingEnd && newEnd > existingStart);
+                
+                if (hasOverlap) {
+                    return !checkSubjectTypeCompatibility(existingEvent, event.event);
+                }
+                
+                return false;
+            });
+
+            if (overlappingEvents.length > 0) {
+                event.revert();
+                showErrorToast(window.trans["Subject is already scheduled for this time slot."]);
+                return;
+            }
+
             let data = new FormData();
             data.append('day', days[date.getDay()]);
             data.append('start_time', startTime24Hr);
@@ -1944,7 +2317,7 @@ if (calendarEl !== null) {
         },
         slotMinTime: "00:00:00",
         slotMaxTime: "00:00:00",
-        hiddenDays: [0],
+        firstDay: 1,
         allDaySlot: false,
         expandRows: true,
         slotDuration: "01:00:00",
@@ -2021,11 +2394,16 @@ $(document).ready(function () {
     $('#exam-id').trigger('change');
     $('#transfer_class_section').trigger('change');
     $('#filter-class-section-id').trigger('change');
-    $('#filter_session_year_id').trigger('change');
+    $('#filter_fees_id').trigger('change');
 });
 
 $('#class-section-id').on('change', function () {
-    getSubjectOptionsList('#subject-id', $(this))
+    let user_id = $('#user_id').val() ?? '';
+    getSubjectOptionsList('#subject-id', $(this), user_id)
+});
+
+$('#filter-class-section-id').on('change', function () {
+    getElectiveSubjectOptionsList('#elective-subject-id', $(this))
 });
 
 $('#class-section-id').on('change', function () {
@@ -2040,6 +2418,12 @@ $('#filter-class-section-id').on('change', function () {
     getClassSubjectOptionsList('#filter-class-subject-id', dataId)
 });
 
+$('#filter_fees_id').on('change', function () {
+    var selectedOption = $(this).find(':selected');
+    var dataId = selectedOption.data('class-section-id');
+    getFeesClassOptionsList('#filter-class-section-id', dataId)
+});
+
 $('#edit-class-section-id').on('change', function () {
     getSubjectOptionsList('#edit-subject-id', $(this))
 });
@@ -2049,12 +2433,29 @@ $('#filter-class-section-id').on('change', function () {
 });
 
 $('#exam-id').on('change', function () {
-    getExamSubjectOptionsList('#class_subject_id', $(this))
+    getExamSubjectOptionsList('#class_subject_id', $(this), $('#exam-class-section-id').val())
 });
 
 $('#filter_session_year_id').on('change', function () {
     // TODO : this code needs to be improved. Instead of this Ajax should be here
     getExamOptionsList('#filter_exam_id', $(this))
+});
+$('#session_year_id').on('change', function () {
+    // TODO : this code needs to be improved. Instead of this Ajax should be here
+    getExamOptionsList('#exam_id', $(this))
+});
+
+$('#exam_result_session_year_id').on('change', function () {
+    getDashboardExamOptionsList('#exam_reuslt_exam_name', $(this))
+});
+
+$('#filter-class-id').on('change', function () {
+    getExamOptionsListByClass('#filter-exam-id', $(this))
+});
+
+$('#filter_exam_id').on('change', function () {
+    // TODO : this code needs to be improved. Instead of this Ajax should be here
+    getExamClassOptionsList('#filter_class_section_id')
 });
 
 const addNewOptionRepeater = $('.options-data').repeater({
@@ -2086,7 +2487,7 @@ const addNewOptionRepeater = $('.options-data').repeater({
                 successCallBack: function () {
                     setTimeout(() => {
                         window.location.reload()
-                        removeOptionWithAnswer($this, deleteElement)
+                        // removeOptionWithAnswer($this, deleteElement)
                     }, 100);
                 }
             });
@@ -2096,8 +2497,40 @@ const addNewOptionRepeater = $('.options-data').repeater({
     }
 });
 
-const feesClassTypeRepeater = $('.fees-class-types').repeater({
+const compulsoryFeesTypeRepeater = $('.compulsory-fees-types').repeater({
     isFirstItemUndeletable: true,
+    initEmpty: true,
+    show: function () {
+        $(this).slideDown();
+        // Check the duplicate Values in Fees Type Select Option
+        $(this).find('.fees_type').rules("add", {
+            "noDuplicateValues": {
+                parentClass: "fees-class-types",
+                class: "fees_type",
+                value: $(this).find('.fees_type').find("option:selected").text()
+            }
+        });
+        // Change the Form Fields type of text to number who has Attribute data-convert = number
+        $(this).find('input[data-convert="number"]').removeAttr('type').attr('type', "number");
+        $(this).find('.optional_no').prop('checked', true);
+    },
+    hide: function (deleteElement) {
+        let feesClassTypeID = $(this).find('.fees_class_type_id').val();
+        if (feesClassTypeID) {
+            let url = baseUrl + '/fees/class-type/' + feesClassTypeID;
+            showDeletePopupModal(url, {
+                successCallBack: function () {
+                    $(this).slideUp(deleteElement);
+                }
+            });
+        } else {
+            $(this).slideUp(deleteElement);
+        }
+    }
+});
+
+const optionalFeesTypeRepeater = $('.optional-fees-types').repeater({
+    initEmpty: true,
     show: function () {
         $(this).slideDown();
         // Check the duplicate Values in Fees Type Select Option
@@ -2174,6 +2607,7 @@ $(document).on('click', '.pay-in-installment', function () {
         $('#installment-mode').val(1)
         $('.installment_rows').show(200);
         $('#total_amount_text').html(Number(0).toFixed(2));
+        $('.without_installment_enter_amount').addClass('d-none');
 
         $('.installment-checkbox').each(function () {
             if ($(this).hasClass('default-checked-installment')) {
@@ -2184,6 +2618,9 @@ $(document).on('click', '.pay-in-installment', function () {
             }
         })
     } else {
+        // 
+        $('.without_installment_enter_amount').removeClass('d-none');
+        $('.default-checked-installment').prop('checked', false).trigger('change');
         $('.installment_rows').hide(200);
         $('#installment-mode').val(0);
         $('#total_amount_text').html($('#total_compulsory_fees').val());
@@ -2196,6 +2633,10 @@ $('.installment-checkbox').on('change', function () {
     let installmentWithDueCharges = installmentAmount + dueChargesAmount;
     let totalInstallmentAmount = parseFloat($('#total_installment_amount').val());
     let remainingAmount = parseFloat($('#remaining_amount').val());
+
+    $('.enter_amount').val(0);
+    $('#advance').trigger('change');
+
 
     if ($(this).is(':checked')) {
         // $('#total_amount_text').html((totalAmount + totalInstallmentAmount).toFixed(2));
@@ -2227,19 +2668,19 @@ $('#advance').on('change', function () {
     $('#total_amount_text').text((totalAmount + advance).toFixed(2));
 })
 
-$('#exam-class-section-id').on('change', function () {
-    // Get Class ID form the Data Attribute of Class Selected
-    let classId = $(this).find('option[value="' + $(this).val() + '"]').data('classid');
+// $('#exam-class-section-id').on('change', function () {
+//     // Get Class ID form the Data Attribute of Class Selected
+//     let classId = $(this).find('option[value="' + $(this).val() + '"]').data('classid');
 
-    // Add Exams Options According to Class ID
-    $('#exam-id').val("").removeAttr('disabled').show();
-    $('#exam-id').find('option').hide();
-    if ($('#exam-id').find('option[data-classId="' + classId + '"]').length) {
-        $('#exam-id').find('option[data-classId="' + classId + '"]').show();
-    } else {
-        $('#exam-id').val("data-not-found").attr('disabled', true).show();
-    }
-})
+//     // Add Exams Options According to Class ID
+//     $('#exam-id').val("").removeAttr('disabled').show();
+//     $('#exam-id').find('option').hide();
+//     if ($('#exam-id').find('option[data-classId="' + classId + '"]').length) {
+//         $('#exam-id').find('option[data-classId="' + classId + '"]').show();
+//     } else {
+//         $('#exam-id').val("data-not-found").attr('disabled', true).show();
+//     }
+// })
 
 // Timetable set text color depend in subject div color
 $(document).ready(function () {
@@ -2276,16 +2717,39 @@ $(document).ready(function () {
 // End timetable color
 
 $('#subject-id').on('change', function () {
-    let classSectionId = $("#class-section-id").val()
-    $("#topic-lesson-id").val("").removeAttr('disabled').show();
-    $("#topic-lesson-id").find('option').hide();
-    if ($("#topic-lesson-id").find('option[data-class-section="' + classSectionId + '"][data-subject="' + $(this).val() + '"]').length) {
-        $("#topic-lesson-id").find('option[data-class-section="' + classSectionId + '"][data-subject="' + $(this).val() + '"]').show();
-    } else {
-        $("#topic-lesson-id").val("data-not-found").attr('disabled', true).show();
-    }
-})
+    let selectedSubjectId = $(this).val();
+    // let selectedClassSectionIds = $('#class-section-id').val(); // This returns array for multi-select
 
+    // $('#topic-lesson-id').val("").removeAttr('disabled').show();
+    // $('#topic-lesson-id').find('option').hide();
+
+    // let lessonOptionsFound = false;
+    // let shownLessonIds = new Set();
+    
+    // selectedClassSectionIds.forEach(function(classSectionId) {
+    //     $('#topic-lesson-id option').each(function() {
+    //         let lessonId = $(this).val();
+    //         if ($(this).data('subject') == selectedSubjectId && 
+    //             !shownLessonIds.has(lessonId)) {
+    //             $(this).show();
+    //             shownLessonIds.add(lessonId);
+    //             lessonOptionsFound = true;
+    //         }
+    //     });
+    // });
+
+    // if (!lessonOptionsFound) {
+    //     $('#topic-lesson-id').val("data-not-found").attr('disabled', true).show();
+    // }
+
+    $('#topic-lesson-id').val("").removeAttr('disabled').show();
+    $('#topic-lesson-id').find('option').hide();
+    if ($('#topic-lesson-id').find('option[data-subject="' + selectedSubjectId + '"]').length) {
+        $('#topic-lesson-id').find('option[data-subject="' + selectedSubjectId + '"]').show();
+    } else {
+        $('#topic-lesson-id').val("data-not-found").attr('disabled', true).show();
+    }
+});
 
 $(document).on('click', '.remove-optional-fees-paid', function (e) {
     e.preventDefault();
@@ -2343,11 +2807,10 @@ $("#stream_id").on("select2:selecting", function (e) {
     }, 1);
 
     let id = e.params.args.data.text;
-    console.log(id);
-    id = id.replace(" ", "-");
+    id = id.replace(/\s+/g, "-").trim();
     setTimeout(function () {
-        $("#" + id + "-section-div").slideDown(500);
-    }, 3)
+        $("#" + $.escapeSelector(id) + "-section-div").slideDown(500);
+    }, 300)
 
 });
 
@@ -2361,10 +2824,10 @@ $('#stream_id').on("select2:unselecting", function (e) {
     }, 1);
 
     let id = e.params.args.data.text;
-    id = id.replace(" ", "-");
+    id = id.replace(/\s+/g, "-").trim();
     setTimeout(function () {
-        $("#" + id + "-section-div").slideUp(500);
-    }, 3)
+        $("#" + $.escapeSelector(id) + "-section-div").slideUp(500);
+    }, 300)
 });
 
 // $('#stream_id').on('change', function (e) {
@@ -2389,7 +2852,7 @@ $(document).ready(function () {
     }
 });
 
-$('#change-roll-ckh-settings').on('click', function (e) {
+$('#change-roll-ckh-settings').on('click', function () {
     Swal.fire({
         title: window.trans["Are you sure"],
         text: window.trans["Change Roll Number for All Classes"],
@@ -2398,6 +2861,7 @@ $('#change-roll-ckh-settings').on('click', function (e) {
         confirmButtonColor: '#3085d6',
         cancelButtonColor: '#d33',
         confirmButtonText: window.trans["Yes"],
+        cancelButtonText: window.trans["Cancel"]
     }).then((result) => {
         if (result.isConfirmed) {
             $(this).prop("checked", true);
@@ -2416,7 +2880,7 @@ $('.delete-related-data').on('click', function (e) {
 })
 
 
-$("#select-all").click(function () {
+$("#select-all").on('click', function () {
     let dropdown = $(this).parent().parent().siblings('select');
     if ($(this).is(':checked')) {
         $(dropdown).find("option").prop("selected", "selected");
@@ -2457,7 +2921,6 @@ $('#edit_to_date,#edit_from_date').change(function (e) {
     let disabled = 'disabled';
     let holiday_days = $('.holiday_days').val();
     let public_holiday = $('.public_holiday').val();
-    console.log(holiday_days);
     if (holiday_days) {
         holiday_days = holiday_days.split(',');
     } else {
@@ -2486,7 +2949,6 @@ function date_list(from_date, to_date, div, to_date_null, disabled, holiday_days
         while (from_date <= to_date) {
             let date = moment(from_date, 'YYYY-MM-DD').format('DD-MM-YYYY');
             let day = days[from_date.getDay()];
-            console.log(public_holiday);
             if (!holiday_days.includes(day) && !public_holiday.includes(date)) {
                 html += '<div class="form-group col-sm-12 col-md-12">';
                 html += '<label class="mr-2">' + date + '</label>-';
@@ -2499,42 +2961,6 @@ function date_list(from_date, to_date, div, to_date_null, disabled, holiday_days
         return html;
     }
 }
-
-$('.filter-leave').change(function (e) {
-    e.preventDefault();
-    let filter_leave = $('.filter-leave').val();
-    let url = baseUrl + '/leave/filter';
-    let data = {
-        'filter_leave': filter_leave,
-    };
-
-    function successCallback(response) {
-        let html = ""
-        if (response.data.length > 0) {
-            $.each(response.data, function (index, value) {
-                html += '<div class="col-md-12 bg-light p-1 mb-2">';
-                html += '<span>' + value.leave.user.full_name + ' </span>';
-                if (value.type == "Full") {
-                    html += '<div class="badge custom-badge badge-danger">' + value.type + '</div>';
-                }
-                if (value.type == "First Half") {
-                    html += '<div class="badge custom-badge badge-primary">' + value.type + '</div>';
-                }
-                if (value.type == "Second Half") {
-                    html += '<div class="badge custom-badge badge-info">' + value.type + '</div>';
-                }
-                html += '<span class="float-right text-muted">' + value.leave_date + '</span>';
-                html += '</div>';
-            });
-        } else {
-
-            html = '<div class="col-md-12 text-center bg-light p-2 mb-2"> <span>' + window.trans['no_data_found'] + '.</span> </div>';
-        }
-        $('.leave-details').html(html);
-    }
-
-    ajaxRequest('GET', url, data, null, successCallback, null, null, true);
-});
 
 
 $('#send_verification_email').on('submit', function (e) {
@@ -2552,3 +2978,637 @@ $('#send_verification_email').on('submit', function (e) {
     });
 
 })
+
+$(document).on('input', '.amount', function () {
+    $('#due_charges_percentage').trigger('input');
+})
+
+$('#due_charges_percentage').on('input', function () {
+    let compulsoryFeesAmounts = $('.compulsory-fees-types').find('.amount');
+
+    let totalCompulsoryFee = 0;
+
+    compulsoryFeesAmounts.each(function (value, element) {
+        totalCompulsoryFee += parseFloat($(element).val());
+    })
+
+    let dueAmount = totalCompulsoryFee * $("#due_charges_percentage").val() / 100;
+    $('#due_charges_amount').val(dueAmount);
+})
+
+$('#due_charges_amount').on('input', function () {
+    let compulsoryFeesAmounts = $('.compulsory-fees-types').find('.amount');
+
+    let totalCompulsoryFee = 0;
+
+    compulsoryFeesAmounts.each(function (value, element) {
+        totalCompulsoryFee += parseFloat($(element).val());
+    })
+
+    let duePercentage = ($("#due_charges_amount").val() * 100) / totalCompulsoryFee;
+    $('#due_charges_percentage').val(duePercentage);
+})
+
+$('#tags').tagsInput({
+    'width': '100%',
+    'height': '75%',
+    'interactive': true,
+    'defaultText': window.trans['Add More'],
+    'removeWithBackspace': true,
+    'minChars': 0,
+    // 'maxChars': 20, // if not provided there is no limit
+    'placeholderColor': '#666666'
+});
+
+$('.filter_birthday').change(function (e) { 
+    e.preventDefault();
+    let type = $(this).val();
+    $.ajax({
+        type: "get",
+        url: baseUrl + '/users/birthday/'+ type,
+        success: function (response) {
+            let html = '';
+            if (response.data.length) {
+                $.each(response.data, function (index, value) { 
+                    html += '<tr> <td> <img src="'+value.image+'" onerror="onErrorImage(event)" class="me-2" alt="image"> </td> <td>'+value.full_name+' </td> <td class="text-right">'+value.dob_date+'</td> </tr>';
+                });
+            } else {
+                html += '<tr> <td colspan="2" class="text-center"> '+window.trans['no_data_found']+' </td> </tr>';
+            }
+            setTimeout(() => {
+                $('.birthday-list').html(html);
+            }, 500);
+        }
+    });
+});
+
+$('.filter_leaves').change(function (e) {
+    e.preventDefault();
+    let filter_leave = $(this).val();
+    let url = baseUrl + '/leave/filter';
+    let data = {
+        'filter_leave': filter_leave,
+    };
+
+    function successCallback(response) {
+        let html = ""
+        if (response.data.length > 0) {
+            $.each(response.data, function (index, value) {
+                if (value.type == "Full") {
+                    html += '<tr> <td>'+value.leave.user.full_name+'<span class="m-2 text-white text-small leave-type leave-full">'+value.type+' Day</span> </td> <td class="text-right">'+value.leave_date+'</td> </tr>';
+                }
+                if (value.type == "First Half") {
+                    html += '<tr> <td>'+value.leave.user.full_name+'<span class="m-2 text-white text-small leave-type leave-half">'+value.type+'</span> </td> <td class="text-right">'+value.leave_date+'</td> </tr>';
+                }
+                if (value.type == "Second Half") {
+                    html += '<tr> <td>'+value.leave.user.full_name+'<span class="m-2 text-white text-small leave-type leave-half">'+value.type+'</span> </td> <td class="text-right">'+value.leave_date+'</td> </tr>';
+                }
+                
+            });
+        } else {
+            // 
+            html += '<tr> <td colspan="2" class="text-center"> '+window.trans['All are presents']+' </td> </tr>';
+        }
+        $('.leave-list').html(html);
+    }
+
+    ajaxRequest('GET', url, data, null, successCallback, null, null, true);
+});
+
+$('#filter_expense_session_year_id').change(function(e) {
+    e.preventDefault();
+    let session_year_id = $(this).val();
+    $.ajax({
+        type: "get",
+        url: baseUrl + '/expense/filter/' + session_year_id,
+        success: function(response) {
+            if (response.data) {
+                setTimeout(() => {
+                    expense_graph(response.data.expense_months, response.data.expense_amount);
+                }, 1000);
+            }
+        }
+    });
+});
+
+$('#exam_result_session_year_id,#exam_reuslt_exam_name').on('change', function (e) {
+    e.preventDefault();
+    let exam_name = $('#exam_reuslt_exam_name').val();
+    let session_year_id = $('#exam_result_session_year_id').val();
+    if (exam_name && session_year_id) {
+        $.ajax({
+            type: "get",
+            url: baseUrl + '/exams/result-report/'+session_year_id+'/'+exam_name,
+            success: function (response) {                
+                let html = '';
+                if (response.data.length) {
+                    let bg_colors = ['bg-success','bg-info','bg-primary','bg-warning','bg-danger'];
+                    $.each(response.data, function (index, value) { 
+                         let total_students = parseInt(value.total_students);
+                         let total_pass = parseInt(value.pass_students);
+                         let per = (total_pass*100) / total_students;
+                         per = per.toFixed(2);
+                         html += '<div class="d-flex justify-content-between mt-3"> <small class="font-weight-bold">'+window.trans['Class']+': '+value.class_name+'</small> <small class="font-weight-bold">'+per+'%</small> </div> <div class="progress progress-lg mt-2"> <div class="progress-bar '+bg_colors[index]+'" role="progressbar" style="width: '+per+'%" aria-valuenow="'+per+'" aria-valuemin="0" aria-valuemax="100"></div> </div>';
+
+                    });
+                } else {
+                    html += '<div class="text-center"> <span class="text-small"> '+window.trans['no_exam_result_found']+' </span> </div>';
+                }
+                $('#class-progress-report').html(html);
+            }
+        });    
+    } else {
+        $('#class-progress-report').html('<div class="text-center"> <span class="text-small"> '+window.trans['no_exam_result_found']+' </span> </div>');
+    }
+})
+
+$('.class-section-attendance').change(function (e) { 
+    e.preventDefault();
+    let class_id = $(this).val();
+
+    $.ajax({
+        type: "get",
+        url: baseUrl + '/class/attendance/' + class_id,
+        success: function(response) {
+            if (response.data) {
+                setTimeout(() => {
+                    class_attendance(response.data.section, response.data.data);
+                }, 1000);
+            } else {
+                setTimeout(() => {
+                    class_attendance(['A','B','C','D','E'], []);
+                }, 1000);
+            }
+        }
+    });
+});
+
+
+$('.year-filter').change(function (e) { 
+    e.preventDefault();
+    let year = $(this).val();
+
+    $.ajax({
+        type: "get",
+        url: baseUrl + '/subscriptions/transaction/' + year,
+        success: function(response) {
+
+            if (response.data) {
+                setTimeout(() => {
+                    subscription_transaction(Object.keys(response.data), Object.values(response.data));
+                }, 1000);    
+            } else {
+                setTimeout(() => {
+                    subscription_transaction(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], []);
+                }, 1000); 
+            }
+        }
+    });
+});
+
+$('.page_layout').change(function (e) { 
+    e.preventDefault();
+    let layout = $(this).val();
+    if (layout == 'A4 Landscape') {
+        $('.height').val(210);
+        $('.width').val(297);
+    } else if(layout == 'A4 Portrait') {
+        $('.height').val(297);
+        $('.width').val(210);
+
+    } else {
+        // $('.height').val('');
+        // $('.width').val('');
+    }
+});
+
+$('.certificate_type').change(function (e) { 
+    e.preventDefault();
+    var type = $('input[name="type"]:checked').val();
+    if (type == 'Student') {
+        $('#staff_tags').hide(500);
+        $('#student_tags').show(500);
+    } else {
+        $('#staff_tags').show(500);
+        $('#student_tags').hide(500);
+    }
+});
+
+
+$('.btn_tag').click(function (e) { 
+    e.preventDefault();
+    var value = $(this).data('value');
+    if (tinymce.activeEditor) { // Check if editor is active
+        tinymce.activeEditor.insertContent(value);
+    } else {
+        alert('TinyMCE editor not active');
+    }
+});
+
+$('#razorpay_status').on('change', function (e) {
+    e.preventDefault();
+    if ($(this).val() == 1) {
+        $('#stripe_status').val(0);
+    }
+});
+$('#stripe_status').on('change', function (e) {
+    e.preventDefault();
+    if ($(this).val() == 1) {
+        $('#razorpay_status').val(0);
+    }
+});
+
+$('.fees-over-due-class').change(function (e) { 
+    e.preventDefault();
+    let class_section_id = $(this).val();
+   
+    $.ajax({
+        type: "get",
+        url: baseUrl + '/fees/fees-over-due/' + class_section_id,
+        success: function(response) {
+            let html = '';
+            if (response.data.length) {
+                $.each(response.data, function (index, value) { 
+                    html += '<tr> <td> <img src="'+ value.user.image +'"/></td><td>' + value.full_name + '</td> <td> <input type="checkbox" name="studentids[]" data-id="' + value.user.id + '"> </td> </tr>';
+                });
+                $('.fees-overdue-btn').removeClass('d-none');
+            } else {
+                html += '<tr> <td colspan="2" class="text-center"> '+ window.trans['no_data_found'] +' </td> </tr>';
+                $('.fees-overdue-btn').addClass('d-none');
+            }
+            setTimeout(() => {
+                $('.fees-over-due-list').html(html);
+            }, 500);
+        }
+    });
+});
+
+$('#fees-overdue-form').on('submit', function(e) {
+    // Collect checked checkbox IDs
+    var checkedIds = [];
+    $('input[type="checkbox"]:checked').each(function() {
+        checkedIds.push($(this).data('id'));
+    });
+
+    // Add the checked IDs to a hidden input field
+    $('<input>').attr({
+        type: 'hidden',
+        name: 'checked_ids',
+        value: checkedIds.join(',')
+    }).appendTo('#fees-overdue-form');
+
+    e.preventDefault();
+    let formElement = $(this);
+    let submitButtonElement = formElement.find(':submit');
+    let url = formElement.attr('action');
+    let data = new FormData(this);
+
+
+    function successCallback() {
+        setTimeout(function () {
+            window.location.reload();
+        }, 2000);
+    }
+
+    formAjaxRequest('POST', url, data, formElement, submitButtonElement, successCallback);
+            
+});
+
+$(document).ready(function() {
+    $('.domain-pattern').on('input', function() {
+        // Replace spaces with dashes
+        var inputVal = $(this).val().replace(/ /g, '-');
+        // Allow only letters, numbers, and dashes
+        inputVal = inputVal.replace(/[^a-zA-Z0-9-.]/g, '');
+        $(this).val(inputVal);
+    });
+});
+
+
+$('#edit_student_class_id').on('change', function () {
+
+    let class_id = $(this).val();
+    let url = baseUrl + '/students/get-class-section-by-class/' + class_id;
+  
+    $('#edit_student_class_section_id option').hide();
+
+    function successCallback(response) {
+        let html = ''
+        html = '<option value="">Select Class Section</option>';
+        if (response.data) {
+            // html = '<option value="">Select Exam</option>';
+            $.each(response.data, function (key, data) {
+                html += '<option value=' + data.id + '>' + data.full_name +  '</option>';
+            });
+        } else {
+            html = '<option>No Class Section Found</option>';
+        }
+        $('#edit_student_class_section_id').html(html);
+    }
+
+    ajaxRequest('GET', url, null, null, successCallback, null);
+});
+
+$('#filter_class_id').on('change', function () {
+
+    let class_id = $(this).val();
+    console.log(class_id);
+
+    // If class_id is empty, reset the class_section_id filter
+    if (!class_id) {
+        $('#filter_class_section_id').html('<option value="">Select Class Section</option>');
+        return; // Exit early, no need to send AJAX request
+    }
+
+    let url = baseUrl + '/students/get-class-section-by-class/' + class_id;
+  
+    $('#filter_class_section_id option').hide();
+
+    function successCallback(response) {
+        let html = ''
+        html = '<option value="">Select Class Section</option>';
+        if (response.data) {
+            $.each(response.data, function (key, data) {
+                html += '<option value=' + data.id + '>' + data.full_name +  '</option>';
+            });
+        } else {
+            html = '<option>No Class Section Found</option>';
+        }
+        $('#filter_class_section_id').html(html);
+    }
+
+    ajaxRequest('GET', url, null, null, successCallback, null);
+});
+
+
+$('.edit_default').on('change', function(){
+
+    $('.defaultDomain').show().find('input').prop('disabled', false);
+    $('.customDomain').hide().find('input').prop('disabled', true);
+
+});
+
+$('.edit_custom').on('change', function(){
+
+    $('.customDomain').show().find('input').prop('disabled', false);
+    $('.defaultDomain').hide().find('input').prop('disabled', true);
+    
+});
+
+$('#class_section_id').on('change', function () {
+
+    let class_section_id = $(this).val();
+   
+    let url = baseUrl + '/exams/get-exams/' + class_section_id;
+    $('#exam_id option').hide();
+    $('#subject_id option').hide();
+
+    function successCallback(response) {
+        let html = ''
+        if (response.data) {
+            html = '<option value="">Select Exam</option>';
+            $.each(response.data, function (key, data) {
+                html += '<option value=' + data.id + '>' + data.name +  '</option>';
+            });
+        } else {
+            html += '<option>No Exams Found</option>';
+        }
+        $('#exam_id').html(html);
+    }
+
+    ajaxRequest('GET', url, null, null, successCallback, null);
+});
+
+$('#exam_id').on('change', function () {
+
+    let class_section_id = $('#class_section_id').val();
+    let exam_id = $(this).val();
+
+    let url = baseUrl + '/exams/get-subjects/' + exam_id + '?class_section_id=' + class_section_id; 
+
+    $('#subject_id option').hide();
+
+    function successCallback(response) {
+        let html = ''
+        html = '<option>No Subjects</option>';
+        if (response.data) {
+            html = '<option value="">Select Subject</option>';
+            $.each(response.data, function (key, data) {
+                html += '<option value=' + data.class_subject_id + '>' + data.subject_with_name + '</option>';
+            });
+        } else {
+            html = '<option>No Subjects Found</option>';
+        }
+        $('#subject_id').html(html);
+    }
+
+    ajaxRequest('GET', url, null, null, successCallback, null);
+});
+
+$('#subject_id').on('change', function(){
+    let subject_id = $('#subject_id').val();
+
+    if(!subject_id)
+    {
+        $('#downloadDummyFile').hide();
+    }else{
+        $('#downloadDummyFile').show();
+    }
+   
+});
+
+$('#change-order-school-form-field').click(async function () {
+    const ids = await $('#table_list').bootstrapTable('getData').map(function (row) {
+        return row.id;
+    });
+    $.ajax({
+        type: "post",
+        url: baseUrl + "/school-custom-fields/update-rank",
+        data: {
+            ids: ids
+        },
+        dataType: "json",
+        success: function (data) {
+            $('#table_list').bootstrapTable('refresh');
+            if (!data.error) {
+                showSuccessToast(data.message);
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showErrorToast(data.message);
+            }
+        }
+    });
+});
+
+// Payment gateway toggle interactions
+$(document).ready(function() {
+    // Stripe toggle
+    $('#Stripe').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#StripeForm').removeClass('d-none');
+            
+            // Uncheck other toggles
+            $('#Paystack').prop('checked', false);
+            $('#PaystackForm').addClass('d-none');
+            $('#Razorpay').prop('checked', false);
+            $('#RazorpayForm').addClass('d-none');
+            $('#Flutterwave').prop('checked', false);
+            $('#FlutterwaveForm').addClass('d-none');
+            
+            // For legacy dropdowns
+            $('#razorpay_status').val(0);
+            $('#paystack_status').val(0);
+            $('#flutterwave_status').val(0);
+            $('#bank_transfer_status').val(0);
+        } else {
+            $('#StripeForm').addClass('d-none');
+        }
+    });
+    
+    // Razorpay toggle
+    $('#Razorpay').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#RazorpayForm').removeClass('d-none');
+            
+            // Uncheck other toggles
+            $('#Stripe').prop('checked', false);
+            $('#StripeForm').addClass('d-none');
+            $('#Paystack').prop('checked', false);
+            $('#PaystackForm').addClass('d-none');
+            $('#Flutterwave').prop('checked', false);
+            $('#FlutterwaveForm').addClass('d-none');
+            
+            // For legacy dropdowns
+            $('#stripe_status').val(0);
+            $('#paystack_status').val(0);
+            $('#flutterwave_status').val(0);
+            $('#bank_transfer_status').val(0);
+        } else {
+            $('#RazorpayForm').addClass('d-none');
+        }
+    });
+    
+    // Paystack toggle
+    $('#Paystack').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#PaystackForm').removeClass('d-none');
+            
+            // Uncheck other toggles
+            $('#Stripe').prop('checked', false);
+            $('#StripeForm').addClass('d-none');
+            $('#Razorpay').prop('checked', false);
+            $('#RazorpayForm').addClass('d-none');
+            $('#Flutterwave').prop('checked', false);
+            $('#FlutterwaveForm').addClass('d-none');
+            
+            // For legacy dropdowns
+            $('#stripe_status').val(0);
+            $('#razorpay_status').val(0);
+            $('#flutterwave_status').val(0);
+            $('#bank_transfer_status').val(0);
+        } else {
+            $('#PaystackForm').addClass('d-none');
+        }
+    });
+    
+    // Flutterwave toggle
+    $('#Flutterwave').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#FlutterwaveForm').removeClass('d-none');
+            
+            // Uncheck other toggles
+            $('#Stripe').prop('checked', false);
+            $('#StripeForm').addClass('d-none');
+            $('#Razorpay').prop('checked', false);
+            $('#RazorpayForm').addClass('d-none');
+            $('#Paystack').prop('checked', false);
+            $('#PaystackForm').addClass('d-none');
+            
+            // For legacy dropdowns
+            $('#stripe_status').val(0);
+            $('#razorpay_status').val(0);
+            $('#paystack_status').val(0);
+            $('#bank_transfer_status').val(0);
+        } else {
+            $('#FlutterwaveForm').addClass('d-none');
+        }
+    });
+});
+
+// two factor verification
+$(document).ready(function() {
+    $('#two_factor_verification').change(function() {
+        if ($(this).is(':checked')) {
+            $('#two_factor_verification').prop('checked', true);
+            $('#two_factor_verification').val(1);
+        } else {
+            $('#two_factor_verification').prop('checked', false);
+            $('#two_factor_verification').val(0);
+        }
+    });
+});
+
+// dashboard read more and read less
+// $(document).ready(function() {
+//     // Initially hide the full content and show only limited height content
+//     $('.hideContent').each(function() {
+//         var content = $(this).find('p');
+//         var contentText = content.text();
+//         var maxLength = 100; // max characters to show initially
+
+//         if(contentText.length > maxLength) {
+//             var visibleText = contentText.substring(0, maxLength);
+//             var hiddenText = contentText.substring(maxLength);
+
+//             var html = visibleText + '<span class="ellipsis">...</span><span class="more-text" style="display:none;">' + hiddenText + '</span>';
+//             content.html(html);
+//             $(this).next('.show-more').show();
+//             $(this).next('.show-more').find('span').text('Read more');
+//         } else {
+//             // If content length is less than maxLength, hide show-more link
+//             $(this).next('.show-more').hide();
+//         }
+//     });
+
+//     // Toggle read more / read less on click
+//     $('.show-more').click(function() {
+//         var moreText = $(this).prev('.hideContent').find('.more-text');
+//         var ellipsis = $(this).prev('.hideContent').find('.ellipsis');
+//         var linkText = $(this).find('span');
+
+//         if(moreText.is(':visible')) {
+//             moreText.hide();
+//             ellipsis.show();
+//             linkText.text('Read more');
+//         } else {
+//             moreText.show();
+//             ellipsis.hide();
+//             linkText.text('Read less');
+//         }
+//     });
+// });
+
+
+function removeSubject(element, subject, id, class_subject_id) {
+    $.ajax({
+        url: baseUrl + '/elective-subject/assign-elective-subject/remove-subject',
+        type: 'POST',
+        data: {
+            student_id: id,
+            class_subject_id: class_subject_id
+        },
+        success: function(response) {
+            if (!response.error) {
+                showSuccessToast(response.message);
+                $('#table_list').bootstrapTable('refresh');
+            } else {
+                showErrorToast(response.message);
+            }
+        },
+        error: function() {
+            showErrorToast('Something went wrong!');
+        }
+    });
+}

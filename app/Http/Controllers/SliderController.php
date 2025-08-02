@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Repositories\Sliders\SlidersInterface;
 use App\Services\BootstrapTableService;
+use App\Services\CachingService;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -11,15 +12,20 @@ use Throwable;
 
 class SliderController extends Controller {
     private SlidersInterface $sliders;
+    private CachingService $cache;
 
-    public function __construct(SlidersInterface $sliders) {
+    public function __construct(SlidersInterface $sliders, CachingService $cache) {
         $this->sliders = $sliders;
+        $this->cache = $cache;
     }
 
     public function index() {
         ResponseService::noFeatureThenRedirect('Slider Management');
         ResponseService::noAnyPermissionThenRedirect(['slider-list','slider-create']);
-        return response(view('sliders.index'));
+
+        $systemSettings = $this->cache->getSystemSettings();
+
+        return response(view('sliders.index', compact('systemSettings')));
     }
 
     public function store(Request $request) {

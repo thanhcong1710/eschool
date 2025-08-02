@@ -27,7 +27,7 @@
                     <textarea id="tinymce_message" name="data" id="data" required placeholder="{{__('online').' '.__('exam').' '.__('terms_condition')}}">{{ isset($onlineExamTermsConditions) && !empty($onlineExamTermsConditions) ? htmlspecialchars_decode($onlineExamTermsConditions) : ''}}</textarea>
               </div>
             </div>
-            <input class="btn btn-theme" type="submit" value="Submit">
+            <input class="btn btn-theme float-right" type="submit" value="{{ __('submit') }}">
           </form>
         </div>
       </div>

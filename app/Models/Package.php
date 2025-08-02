@@ -18,8 +18,16 @@ class Package extends Model {
         'status',
         'is_trial',
         'highlight',
-        'rank'
+        'rank',
+        'days',
+        'type',
+        'no_of_students',
+        'no_of_staffs',
+        'charges'
     ];
+
+    protected $appends = ['package_with_type'];
+    protected $connection = 'mysql';
 
     public function package_feature() {
         return $this->hasMany(PackageFeature::class);
@@ -33,5 +41,14 @@ class Package extends Model {
     public function subscription()
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function getPackageWithTypeAttribute()
+    {
+        if ($this->type == 1) {
+            return $this->name .' #'. trans('postpaid');
+        } else {
+            return $this->name .' #'. trans('prepaid');
+        }
     }
 }

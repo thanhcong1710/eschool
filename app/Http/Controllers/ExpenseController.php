@@ -8,8 +8,10 @@ use App\Repositories\SessionYear\SessionYearInterface;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\ResponseService;
+use App\Services\SessionYearsTrackingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class ExpenseController extends Controller {
@@ -17,11 +19,15 @@ class ExpenseController extends Controller {
     private ExpenseInterface $expense;
     private ExpenseCategoryInterface $expenseCategory;
     private SessionYearInterface $sessionYear;
+    private CachingService $cache;
+    private SessionYearsTrackingsService $sessionYearsTrackingsService;
 
-    public function __construct(ExpenseInterface $expense, ExpenseCategoryInterface $expenseCategory, SessionYearInterface $sessionYear) {
+    public function __construct(ExpenseInterface $expense, ExpenseCategoryInterface $expenseCategory, SessionYearInterface $sessionYear, CachingService $cache, SessionYearsTrackingsService $sessionYearsTrackingsService) {
         $this->expense = $expense;
         $this->expenseCategory = $expenseCategory;
         $this->sessionYear = $sessionYear;
+        $this->cache = $cache;
+        $this->sessionYearsTrackingsService = $sessionYearsTrackingsService;
     }
 
     public function index() {
@@ -50,7 +56,11 @@ class ExpenseController extends Controller {
         try {
             DB::beginTransaction();
             $data = ['category_id' => $request->category_id, 'title' => $request->title, 'ref_no' => $request->ref_no, 'amount' => $request->amount, 'date' => date('Y-m-d', strtotime($request->date)), 'description' => $request->description, 'session_year_id' => $request->session_year_id];
-            $this->expense->create($data);
+            $expense = $this->expense->create($data);
+
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\Expense', $expense->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+
             DB::commit();
             ResponseService::successResponse('Data Stored Successfully');
         } catch (Throwable $e) {
@@ -73,15 +83,25 @@ class ExpenseController extends Controller {
         $session_year_id = request('session_year_id');
         $month = request('month');
 
-        $sql = $this->expense->builder()->with('category')->select('*', DB::raw('SUM(amount) as total_salary'))->groupBy('month', 'date')->where(function ($query) use ($search) {
-                $query->when($search, function ($query) use ($search) {
-                    $query->where(function ($query) use ($search) {
-                        $query->where('title', 'LIKE', "%$search%")->orWhere('ref_no', 'LIKE', "%$search%")->orWhere('amount', 'LIKE', "%$search%")->orWhere('date', 'LIKE', "%$search%")->orWhere('description', 'LIKE', "%$search%")->orWhereHas('category', function ($q) use ($search) {
-                                $q->Where('name', 'LIKE', "%$search%");
-                            });
-                    });
+        // $sql = $this->expense->builder()->with('category')->select('*', DB::raw('SUM(amount) as total_salary'))->groupBy('month', 'date')->where(function ($query) use ($search) {
+        //         $query->when($search, function ($query) use ($search) {
+        //             $query->where(function ($query) use ($search) {
+        //                 $query->where('title', 'LIKE', "%$search%")->orWhere('ref_no', 'LIKE', "%$search%")->orWhere('amount', 'LIKE', "%$search%")->orWhere('date', 'LIKE', "%$search%")->orWhere('description', 'LIKE', "%$search%")->orWhereHas('category', function ($q) use ($search) {
+        //                         $q->Where('name', 'LIKE', "%$search%");
+        //                     });
+        //             });
+        //         });
+        //     });
+
+        $sql = $this->expense->builder()->with('category')->where(function ($query) use ($search) {
+            $query->when($search, function ($query) use ($search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('title', 'LIKE', "%$search%")->orWhere('ref_no', 'LIKE', "%$search%")->orWhere('amount', 'LIKE', "%$search%")->orWhere('date', 'LIKE', "%$search%")->orWhere('description', 'LIKE', "%$search%")->orWhereHas('category', function ($q) use ($search) {
+                            $q->Where('name', 'LIKE', "%$search%");
+                        });
                 });
             });
+        });
 
         if ($category_id) {
             if ($category_id != 'salary') {
@@ -118,7 +138,7 @@ class ExpenseController extends Controller {
 
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
-            $tempRow['amount'] = $row->total_salary;
+            $tempRow['amount'] = $row->amount;
             if ($row->staff_id) {
                 $tempRow['category.name'] = 'Salary';
             }
@@ -155,11 +175,51 @@ class ExpenseController extends Controller {
         try {
             DB::beginTransaction();
             $this->expense->deleteById($id);
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\Expense', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
             DB::commit();
             ResponseService::successResponse('Data Deleted Successfully');
         } catch (Throwable $e) {
             DB::rollBack();
             ResponseService::logErrorResponse($e, "Expense Controller -> Destroy Method");
+            ResponseService::errorResponse();
+        }
+    }
+
+    public function filter_graph($session_year_id)
+    {
+        ResponseService::noFeatureThenRedirect('Expense Management');
+        ResponseService::noAnyPermissionThenSendJson(['expense-create','expense-list']);
+
+        try {
+            $expense_months = [];
+            $expense_amount = [];
+            if ($session_year_id == 'undefined' || $session_year_id == '') {
+                $session_year_id = $this->cache->getDefaultSessionYear()->id;
+            }
+            
+            $expense = $this->expense->builder()->select(DB::raw('MONTH(date) as month'), DB::raw('SUM(amount) as total_amount'))->where('session_year_id', $session_year_id)
+                ->groupBy(DB::raw('MONTH(date)'));
+            $expense = $expense->get()->pluck('total_amount', 'month')->toArray();
+
+            $months = sessionYearWiseMonth();
+            
+            foreach ($months as $key => $month) {
+                if (isset($expense[$key])) {
+                    // $expense_months[] = substr($months[$key], 0, 3);
+                    $expense_months[] = $months[$key];
+                    $expense_amount[] = $expense[$key];
+                }
+            }
+            $data = [
+                'expense_months' => $expense_months,
+                'expense_amount' => $expense_amount
+            ];
+
+            ResponseService::successResponse('Data Fetched Successfully', $data);
+        } catch (Throwable $e) {
+            DB::rollBack();
+            ResponseService::logErrorResponse($e, "Expense Controller -> Filter Method");
             ResponseService::errorResponse();
         }
     }

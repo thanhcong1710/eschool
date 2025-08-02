@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
-
+use App\Models\SessionYearsTracking;
 
 class Lesson extends Model {
     use HasFactory;
@@ -16,7 +16,6 @@ class Lesson extends Model {
         'description',
         'class_section_id',
         'class_subject_id',
-        'semester_id',
         'school_id'
     ];
 
@@ -45,31 +44,27 @@ class Lesson extends Model {
     }
 
     public function scopeOwner($query) {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('School Admin')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Teacher')) {
-            // TODO: Mahesh teacher_id foreign key directly assigned to user table
-            // $teacher_id = $user->teacher()->select('id')->pluck('id')->first();
-            // $subject_teacher = SubjectTeacher::select('class_section_id', 'subject_id')->where('teacher_id', $teacher_id)->get();
-
-            $subject_teacher = SubjectTeacher::select(['class_section_id','subject_id', 'class_subject_id'])->where(['teacher_id' => Auth::user()->id, 'school_id' => Auth::user()->school_id])->get();
-            if ($subject_teacher) {
-                $subject_teacher = $subject_teacher->toArray();
-                $class_section_id = array_column($subject_teacher, 'class_section_id');
-                $class_subject_id = array_column($subject_teacher, 'class_subject_id');
-                return $query->whereIn('class_section_id', $class_section_id)->whereIn('class_subject_id', $class_subject_id);
+        if (Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
             }
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+    
+            if (Auth::user()->hasRole('School Admin')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Teacher')) {
+                $teacherId = Auth::user()->id;
+                return $query->whereHas('subject_teacher', function ($query) use ($teacherId) {
+                    $query->where('teacher_id', $teacherId)
+                          ->whereColumn('class_section_id', 'class_section_id');
+                })->where('school_id',Auth::user()->school_id);
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;
@@ -91,6 +86,14 @@ class Lesson extends Model {
         return $this->hasMany(LessonTopic::class);
     }
 
+    public function lesson_commons() {
+        return $this->hasMany(LessonCommon::class);
+    }
+
+    public function assignment_commons() {
+        return $this->hasMany(AssignmentCommon::class,'assignment_id');
+    }
+
     public function getClassSectionWithMediumAttribute() {
         if ($this->relationLoaded('class_section')) {
             return $this->class_section->class->name . ' ' . $this->class_section->section->name . ' - ' . $this->class_section->medium->name;
@@ -101,9 +104,30 @@ class Lesson extends Model {
 
     public function getSubjectWithNameAttribute() {
         if ($this->relationLoaded('class_subject')) {
-            return $this->class_subject->subject->name . ' - ' . $this->class_subject->subject->type;
+            if ($this->class_subject) {
+                return $this->class_subject->subject->name . ' - ' . $this->class_subject->subject->type;
+            }
+            
         }
         return null;
     }
 
+    /**
+     * Get all of the subject_teacher for the Assignment
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\belongsTo
+     */
+    public function subject_teacher()
+    {
+        return $this->belongsTo(SubjectTeacher::class, 'class_subject_id','class_subject_id');
+    }
+
+    public function semester() {
+        return $this->belongsTo(Semester::class,'semester_id','id');
+    }
+
+    public function session_years_trackings()
+    {
+        return $this->hasMany(SessionYearsTracking::class, 'modal_id', 'id')->where('modal_type', 'App\Models\Lesson');
+    }
 }

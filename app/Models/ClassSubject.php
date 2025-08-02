@@ -5,12 +5,13 @@ namespace App\Models;
 use App\Repositories\Semester\SemesterInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
 
 
 class ClassSubject extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = ['class_id', 'subject_id', 'type', 'semester_id' ,'elective_subject_group_id', 'school_id'];
 
@@ -54,18 +55,35 @@ class ClassSubject extends Model
         return $query;
     }
 
+    public function scopeSubjectTeacherClassTeacher($query)
+    {
+        $user = Auth::user();
+        if ($user->hasRole('Teacher')) {
+            $teacherId = Auth::user()->id;
+            return $query->whereHas('subject_teacher', function ($query) use ($teacherId) {
+                $query->where('teacher_id', $teacherId);
+            })->where('school_id',Auth::user()->school_id);
+        }
+        return $query->where('school_id',Auth::user()->school_id);
+    }
+
     public function scopeOwner($query)
     {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('School Admin')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+        if(Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+            if (Auth::user()->hasRole('Teacher')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;
@@ -90,4 +108,15 @@ class ClassSubject extends Model
         }
         return null;
     }
+
+    /**
+     * Get all of the subject for the ClassSubject
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function subject_teacher()
+    {
+        return $this->hasMany(SubjectTeacher::class);
+    }
+
 }

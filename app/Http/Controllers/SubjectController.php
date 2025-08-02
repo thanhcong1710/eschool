@@ -7,23 +7,27 @@ use App\Repositories\Subject\SubjectInterface;
 use App\Rules\uniqueForSchool;
 use App\Services\BootstrapTableService;
 use App\Services\ResponseService;
+use App\Services\CachingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use App\Rules\MaxFileSize;
 use Throwable;
 
 class SubjectController extends Controller {
     private MediumInterface $medium;
     private SubjectInterface $subject;
+    private CachingService $cache;
 
-    public function __construct(MediumInterface $medium, SubjectInterface $subject) {
+    public function __construct(MediumInterface $medium, SubjectInterface $subject, CachingService $cache) {
         $this->medium = $medium;
         $this->subject = $subject;
+        $this->cache = $cache;
     }
 
     public function index() {
         ResponseService::noPermissionThenRedirect('subject-list');
         $mediums = $this->medium->builder()->orderBy('id', 'DESC')->get();
-        return response(view('subject.index', compact('mediums')));
+        return response(view('subjects.index', compact('mediums')));
     }
 
     public function show(Request $request) {
@@ -64,15 +68,19 @@ class SubjectController extends Controller {
         foreach ($res as $row) {
             if ($request->show_deleted) {
                 //Show Restore and Hard Delete Buttons
-                $operate = BootstrapTableService::restoreButton(route('subject.restore', $row->id));
-                $operate .= BootstrapTableService::trashButton(route('subject.trash', $row->id));
+                $operate = BootstrapTableService::restoreButton(route('subjects.restore', $row->id));
+                $operate .= BootstrapTableService::trashButton(route('subjects.trash', $row->id));
             } else {
                 //Show Edit and Soft Delete Buttons
-                $operate = BootstrapTableService::editButton(route('subject.update', $row->id));
-                $operate .= BootstrapTableService::deleteButton(route('subject.destroy', $row->id));
+                $operate = BootstrapTableService::editButton(route('subjects.update', $row->id));
+                $operate .= BootstrapTableService::deleteButton(route('subjects.destroy', $row->id));
             }
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
+            $tempRow['type'] = trans($row->type);
+            $tempRow['eng_type'] = $row->type;
+            $tempRow['created_at'] = $row->created_at;
+            $tempRow['updated_at'] = $row->updated_at;
             $tempRow['operate'] = $operate;
             $rows[] = $tempRow;
         }
@@ -84,6 +92,7 @@ class SubjectController extends Controller {
 
     public function store(Request $request) {
         ResponseService::noPermissionThenRedirect('subject-create');
+        $file_upload_size_limit = $this->cache->getSystemSettings('file_upload_size_limit');
         $validator = Validator::make($request->all(), [
             'medium_id' => 'required|numeric',
             'type'      => 'required|in:Practical,Theory',
@@ -97,7 +106,7 @@ class SubjectController extends Controller {
                 'nullable',
                 new uniqueForSchool('subjects', ['code' => $request->code, 'medium_id' => $request->medium_id, 'type' => $request->type])
             ],
-            'image'     => 'required|max:2048|mimes:jpg,jpeg,png,svg',
+            'image'     => ['required', 'mimes:jpg,jpeg,png,svg', new MaxFileSize($file_upload_size_limit)],
         ])->setAttributeNames(['bg_color' => 'Background Color']);
 
         if ($validator->fails()) {

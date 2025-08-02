@@ -371,7 +371,7 @@ return new class extends Migration
         Schema::create('announcements', static function (Blueprint $table) {
             $table->id();
             $table->string('title', 128);
-            $table->string('description', 1024)->nullable();
+            $table->longText('description')->nullable();
             $table->foreignId('session_year_id')->references('id')->on('session_years')->onDelete('cascade');
             $table->foreignId('school_id')->references('id')->on('schools')->onDelete('cascade');
             $table->timestamps();
@@ -417,7 +417,7 @@ return new class extends Migration
             $table->id();
             $table->date('date');
             $table->string('title', 128);
-            $table->string('description', 1024)->nullable();
+            $table->longText('description')->nullable();
             $table->foreignId('school_id')->references('id')->on('schools')->onDelete('cascade');
             $table->timestamps();
         });

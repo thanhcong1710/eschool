@@ -39,25 +39,25 @@
                             </div>
                             @can('student-delete')
                                 <div class="form-group col-12">
-                                    <button id="update-status" class="btn btn-secondary" disabled><span class="update-status-btn-name">{{ __('Deactive') }}</span></button>
+                                    <button id="update-status" class="btn btn-secondary" disabled><span class="update-status-btn-name">{{ __('Inactive') }}</span></button>
                                 </div>
                             @endcan
                         </div>
 
                         @can('student-delete')
                             <div class="col-12 mt-4 text-right">
-                                <b><a href="#" class="student-list-type active mr-2" data-value="active">{{__('active')}}</a></b> | <a href="#" class="ml-2 student-list-type" data-value="deative">{{__("Deactive")}}</a>
+                                <b><a href="#" class="table-list-type active mr-2" data-id="0">{{__('active')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{__("Inactive")}}</a>
                             </div>
                         @endcan
                         <div class="row">
                             <div class="col-12">
-                                <table aria-describedby="mydesc" class='table table-responsive' id='table_list'
+                                <table aria-describedby="mydesc" class='table' id='table_list'
                                        data-toggle="table" data-url="{{ route('students.show',[1]) }}" data-click-to-select="true"
                                        data-side-pagination="server" data-pagination="true"
                                        data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
-                                       data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true" data-fixed-columns="true" data-fixed-number="2" data-fixed-right-number="1"
+                                       data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                        data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
-                                       data-sort-order="desc" data-maintain-selected="true" data-export-data-type='all'
+                                       data-sort-order="desc" data-maintain-selected="true" data-export-types="['pdf','json', 'xml', 'csv', 'txt', 'sql', 'doc', 'excel']" data-show-export="true"
                                        data-export-options='{ "fileName": "students-list-<?= date('d-m-y') ?>" ,"ignoreColumn": ["operate"]}' data-query-params="studentDetailsQueryParams"
                                        data-check-on-init="true" data-escape="true">
                                     <thead>
@@ -67,17 +67,24 @@
                                         <th scope="col" data-field="no">{{ __('no.') }}</th>
                                         <th scope="col" data-field="user.id" data-visible="false">{{ __('User Id') }}</th>
                                         <th scope="col" data-field="user.full_name">{{ __('name') }}</th>
-                                        <th scope="col" data-field="user.dob">{{ __('dob') }}</th>
+                                        <th scope="col" data-field="user.dob" data-formatter="dateFormatter">{{ __('dob') }}</th>
                                         <th scope="col" data-field="user.image" data-formatter="imageFormatter">{{ __('image') }}</th>
                                         <th scope="col" data-field="class_section.full_name">{{ __('class_section') }}</th>
                                         <th scope="col" data-field="admission_no"> {{ __('Gr Number') }}</th>
                                         <th scope="col" data-field="roll_number">{{ __('roll_no') }}</th>
                                         <th scope="col" data-field="user.gender">{{ __('gender') }}</th>
-                                        <th scope="col" data-field="admission_date">{{ __('admission_date') }}</th>
+                                        <th scope="col" data-field="admission_date" data-formatter="dateFormatter">{{ __('admission_date') }}</th>
                                         <th scope="col" data-field="guardian.email">{{ __('guardian') . ' ' . __('email') }}</th>
                                         <th scope="col" data-field="guardian.full_name">{{ __('guardian') . ' ' . __('name') }}</th>
                                         <th scope="col" data-field="guardian.mobile">{{ __('guardian') . ' ' . __('mobile') }}</th>
                                         <th scope="col" data-field="guardian.gender">{{ __('guardian') . ' ' . __('gender') }}</th>
+
+                                        {{-- Admission form fields --}}
+                                        @foreach ($extraFields as $field)
+                                            <th scope="col" data-visible="false" data-escape="false" data-field="{{ $field->name }}">{{ $field->name }}</th>
+                                        @endforeach
+                                        {{-- End admission form fields --}}
+
                                         @canany(['student-edit','student-delete'])
                                             <th data-events="studentEvents" class="align-button text-center" scope="col" data-field="operate" data-escape="false">{{ __('action') }}</th>
                                         @endcanany
@@ -121,6 +128,17 @@
                                         @endforeach
                                     </select>
                                 </div>
+
+                                <div class="form-group col-sm-12 col-md-12 col-lg-6 col-xl-4">
+                                    <label>{{ __('Class Section') }} <span class="text-danger">*</span></label>
+                                    <select required name="class_section_id" class="form-control" id="edit_student_class_section_id">
+                                        <option value="">{{ __('select_class_section') }}</option>
+                                        @foreach ($class_sections as $class_section)
+                                            <option value={{ $class_section->id }}>{{$class_section->full_name}}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
                             </div>
                             <hr>
                             <div class="row mt-5">
@@ -190,98 +208,113 @@
 
                                     {{-- Loop the FormData --}}
                                     @foreach ($extraFields as $key => $data)
-                                        @php $fieldName = str_replace(' ', '_', $data->name) @endphp
-                                        {{-- Edit Extra Details ID --}}
-                                        {{ Form::hidden('extra_fields['.$key.'][id]', '', ['id' => $fieldName.'_id']) }}
+                                        @if($data->user_type == 1)
+                                            @php $fieldName = str_replace(' ', '_', $data->name) @endphp
+                                            {{-- Edit Extra Details ID --}}
+                                            {{ Form::hidden('extra_fields['.$key.'][id]', '', ['id' => $fieldName.'_id']) }}
 
-                                        {{-- Form Field ID --}}
-                                        {{ Form::hidden('extra_fields['.$key.'][form_field_id]', $data->id) }}
+                                            {{-- Form Field ID --}}
+                                            {{ Form::hidden('extra_fields['.$key.'][form_field_id]', $data->id) }}
 
-                                        {{-- FormFieldType --}}
-                                        {{ Form::hidden('extra_fields['.$key.'][input_type]', $data->type) }}
+                                            {{-- FormFieldType --}}
+                                            {{ Form::hidden('extra_fields['.$key.'][input_type]', $data->type) }}
 
-                                        <div class='form-group col-md-12 col-lg-6 col-xl-4 col-sm-12'>
+                                            <div class='form-group col-md-12 col-lg-6 col-xl-4 col-sm-12'>
 
-                                            {{-- Add lable to all the elements excluding checkbox --}}
-                                            @if($data->type != 'radio' && $data->type != 'checkbox')
-                                                <label>{{$data->name}} @if($data->is_required)
-                                                        <span class="text-danger">*</span>
-                                                    @endif</label>
-                                            @endif
+                                                {{-- Add lable to all the elements excluding checkbox --}}
+                                                @if($data->type != 'radio' && $data->type != 'checkbox')
+                                                    <label>{{$data->name}} @if($data->is_required)
+                                                            <span class="text-danger">*</span>
+                                                        @endif</label>
+                                                @endif
 
-                                            {{-- Text Field --}}
-                                            @if($data->type == 'text')
-                                                {{ Form::text('extra_fields['.$key.'][data]', '', ['class' => 'form-control text-fields', 'id' => $fieldName, 'placeholder' => $data->name, ($data->is_required == 1 ? 'required' : '')]) }}
-                                                {{-- Number Field --}}
-                                            @elseif($data->type == 'number')
-                                                {{ Form::number('extra_fields['.$key.'][data]', '', ['min' => 0, 'class' => 'form-control number-fields', 'id' => $fieldName, 'placeholder' => $data->name, ($data->is_required == 1 ? 'required' : '')]) }}
+                                                {{-- Text Field --}}
+                                                @if($data->type == 'text')
+                                                    {{ Form::text('extra_fields['.$key.'][data]', '', ['class' => 'form-control text-fields', 'id' => $fieldName, 'placeholder' => $data->name, ($data->is_required == 1 ? 'required' : '')]) }}
+                                                    {{-- Number Field --}}
+                                                @elseif($data->type == 'number')
+                                                    {{ Form::number('extra_fields['.$key.'][data]', '', ['min' => 0, 'class' => 'form-control number-fields', 'id' => $fieldName, 'placeholder' => $data->name, ($data->is_required == 1 ? 'required' : '')]) }}
 
-                                                {{-- Dropdown Field --}}
-                                            @elseif($data->type == 'dropdown')
-                                                {{ Form::select(
-                                                    'extra_fields['.$key.'][data]',$data->default_values,
-                                                    null,
-                                                    [
-                                                        'id' => $fieldName,
-                                                        'class' => 'form-control select-fields',
-                                                        ($data->is_required == 1 ? 'required' : ''),
-                                                        'placeholder' => 'Select '.$data->name
-                                                    ]
-                                                )}}
+                                                    {{-- Dropdown Field --}}
+                                                @elseif($data->type == 'dropdown')
+                                                    {{ Form::select(
+                                                        'extra_fields['.$key.'][data]',$data->default_values,
+                                                        null,
+                                                        [
+                                                            'id' => $fieldName,
+                                                            'class' => 'form-control select-fields',
+                                                            ($data->is_required == 1 ? 'required' : ''),
+                                                            'placeholder' => 'Select '.$data->name
+                                                        ]
+                                                    )}}
 
-                                                {{-- Radio Field --}}
-                                            @elseif($data->type == 'radio')
-                                                <label class="d-block">{{$data->name}} @if($data->is_required)
-                                                        <span class="text-danger">*</span>
-                                                    @endif</label>
-                                                <div class="row form-check-inline ml-1">
-                                                    @foreach ($data->default_values as $keyRadio => $value)
-                                                        <div class="col-md-12 col-lg-12 col-xl-6 col-sm-12 form-check">
-                                                            <label class="form-check-label">
-                                                                {{ Form::radio('extra_fields['.$key.'][data]', $value, null, ['id' => $fieldName.'_'.$keyRadio, 'class' => 'radio-fields']) }}
-                                                                {{$value}}
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
+                                                    {{-- Radio Field --}}
+                                                @elseif($data->type == 'radio')
+                                                    <label class="d-block">{{$data->name}} @if($data->is_required)
+                                                            <span class="text-danger">*</span>
+                                                        @endif</label>
+                                                    <div class="row form-check-inline ml-1">
+                                                        @foreach ($data->default_values as $keyRadio => $value)
+                                                            <div class="col-md-12 col-lg-12 col-xl-6 col-sm-12 form-check">
+                                                                <label class="form-check-label">
+                                                                    {{ Form::radio('extra_fields['.$key.'][data]', $value, null, ['id' => $fieldName.'_'.$keyRadio, 'class' => 'radio-fields',($data->is_required == 1 ? 'required' : '')]) }}
+                                                                    {{$value}}
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
 
-                                                {{-- Checkbox Field --}}
-                                            @elseif($data->type == 'checkbox')
-                                                <label class="d-block">{{$data->name}} @if($data->is_required)
-                                                        <span class="text-danger">*</span>
-                                                    @endif</label>
-                                                <div class="row form-check-inline ml-1">
-                                                    @foreach ($data->default_values as $chkKey => $value)
-                                                        <div class="col-lg-12 col-xl-6 col-md-12 col-sm-12 form-check">
-                                                            <label class="form-check-label">
-                                                                {{ Form::checkbox('extra_fields['.$key.'][data][]', $value, null, ['id' => $fieldName.'_'.$chkKey, 'class' => 'form-check-input chkclass checkbox-fields']) }} {{ $value }}
-                                                            </label>
-                                                        </div>
-                                                    @endforeach
-                                                </div>
+                                                    {{-- Checkbox Field --}}
+                                                @elseif($data->type == 'checkbox')
+                                                    <label class="d-block">{{$data->name}} @if($data->is_required)
+                                                            <span class="text-danger">*</span>
+                                                        @endif</label>
+                                                    <div class="row form-check-inline ml-1">
+                                                        @foreach ($data->default_values as $chkKey => $value)
+                                                            <div class="col-lg-12 col-xl-6 col-md-12 col-sm-12 form-check">
+                                                                <label class="form-check-label">
+                                                                    {{ Form::checkbox('extra_fields['.$key.'][data][]', $value, null, ['id' => $fieldName.'_'.$chkKey, 'class' => 'form-check-input chkclass checkbox-fields',($data->is_required == 1 ? 'required' : '')]) }} {{ $value }}
+                                                                </label>
+                                                            </div>
+                                                        @endforeach
+                                                    </div>
 
-                                                {{-- Textarea Field --}}
-                                            @elseif($data->type == 'textarea')
-                                                {{ Form::textarea('extra_fields['.$key.'][data]', '', ['placeholder' => $data->name, 'id' => $fieldName, 'class' => 'form-control textarea-fields', ($data->is_required ? 'required' : '') , 'rows' => 3]) }}
+                                                    {{-- Textarea Field --}}
+                                                @elseif($data->type == 'textarea')
+                                                    {{ Form::textarea('extra_fields['.$key.'][data]', '', ['placeholder' => $data->name, 'id' => $fieldName, 'class' => 'form-control textarea-fields', ($data->is_required ? 'required' : '') , 'rows' => 3]) }}
 
-                                                {{-- File Upload Field --}}
-                                            @elseif($data->type == 'file')
-                                                <div class="input-group col-xs-12">
-                                                    {{ Form::file('extra_fields['.$key.'][data]', ['class' => 'file-upload-default', 'id' => $fieldName]) }}
-                                                    {{ Form::text('', '', ['class' => 'form-control file-upload-info', 'disabled' => '', 'placeholder' => __('image')]) }}
-                                                    <span class="input-group-append">
-                                                        <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
-                                                    </span>
-                                                </div>
-                                                <div id="file_div_{{$fieldName}}" class="mt-2 d-none file-div">
-                                                    <a href="" id="file_link_{{$fieldName}}" target="_blank">{{$data->name}}</a>
-                                                </div>
-
-                                            @endif
-                                        </div>
+                                                    {{-- File Upload Field --}}
+                                                @elseif($data->type == 'file')
+                                                    <div class="input-group col-xs-12">
+                                                        {{ Form::file('extra_fields['.$key.'][data]', ['class' => 'file-upload-default', 'id' => $fieldName]) }}
+                                                        {{ Form::text('', '', ['class' => 'form-control file-upload-info', 'disabled' => '', 'placeholder' => __('image')]) }}
+                                                        <span class="input-group-append">
+                                                            <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
+                                                        </span>
+                                                    </div>
+                                                    <div id="file_div_{{$fieldName}}" class="mt-2 d-none file-div">
+                                                        <a href="" id="file_link_{{$fieldName}}" target="_blank">{{$data->name}}</a>
+                                                    </div>
+                                                @endif
+                                            </div>
+                                        @endif
                                     @endforeach
                                 </div>
                             @endif
+
+                            <div class="row">
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <div class="d-flex">
+                                        <div class="form-check w-fit-content">
+                                            <label class="form-check-label ml-4">
+                                                <input type="checkbox" class="form-check-input" name="reset_password" value="1">{{ __('reset_password') }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            
 
                             <hr>
                             {{-- Guardian Details --}}
@@ -324,10 +357,34 @@
                                         </div>
                                     </div>
                                 </div>
+                                <div class="form-group col-sm-12 col-md-12 col-lg-6 col-xl-4">
+                                    <label>{{ __('image') }} </label>
+                                    <input type="file" name="guardian_image" class="file-upload-default"/>
+                                    <div class="input-group col-xs-12">
+                                        <input type="text" class="form-control file-upload-info" disabled="" placeholder="{{ __('image') }}" required="required" id="edit_image"/>
+                                        <span class="input-group-append">
+                                            <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
+                                        </span>
+                                    </div>
+                                    <div style="width: 100px;">
+                                        <img src="" id="edit-guardian-image-tag" class="img-fluid w-100" alt=""/>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <div class="d-flex">
+                                        <div class="form-check w-fit-content">
+                                            <label class="form-check-label ml-4">
+                                                <input type="checkbox" class="form-check-input" name="parent_reset_password" value="1">{{ __('reset_password') }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                             <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                         </div>
                     </form>
@@ -339,11 +396,11 @@
 @section('script')
     <script>
         let userIds;
-        $('.student-list-type').on('click', function (e) {
-            let value = $(this).data('value');
+        $('.table-list-type').on('click', function (e) {
+            let value = $(this).data('id');
             let ActiveLang = window.trans['Active'];
-            let DeactiveLang = window.trans['Deactive'];
-            if (value === "" || value === "active" || value == null) {
+            let DeactiveLang = window.trans['Inactive'];
+            if (value === "" || value === 0 || value == null) {
                 $("#update-status").data("id")
                 $('.update-status-btn-name').html(DeactiveLang);
             } else {
@@ -390,7 +447,8 @@
                 showCancelButton: true,
                 confirmButtonColor: '#3085d6',
                 cancelButtonColor: '#d33',
-                confirmButtonText: window.trans["Yes, Change it"]
+                confirmButtonText: window.trans["Yes, Change it"],
+                cancelButtonText: window.trans["Cancel"]
             }).then((result) => {
                 if (result.isConfirmed) {
                     let url = baseUrl + '/students/change-status-bulk';

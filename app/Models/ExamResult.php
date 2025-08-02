@@ -19,7 +19,8 @@ class ExamResult extends Model
         'percentage',
         'grade',
         'session_year_id',
-        'school_id'
+        'school_id',
+        'status'
     ];
 
 
@@ -40,36 +41,54 @@ class ExamResult extends Model
 
     public function scopeOwner($query)
     {
+        if (Auth::user()) {
+            if (Auth::user()->school_id) {
+                if (Auth::user()->hasRole('School Admin')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
 
-        if (Auth::user()->school_id) {
-            if (Auth::user()->hasRole('School Admin')) {
+                if (Auth::user()->hasRole('Teacher')) {
+                    // Show only the Results in which Teacher is assigned as Class Teacher
+                    $classSectionId = ClassTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id');
+                    return $this->whereIn('class_section_id' , $classSectionId);
+                }
+
+                if (Auth::user()->hasRole('Student')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
                 return $query->where('school_id', Auth::user()->school_id);
             }
-
-            if (Auth::user()->hasRole('Teacher')) {
-                // Show only the Results in which Teacher is assigned as Class Teacher
-                $classSectionId = ClassTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id');
-                return $this->whereIn('class_section_id' , $classSectionId);
-            }
-
-            if (Auth::user()->hasRole('Student')) {
-                return $query->where('school_id', Auth::user()->school_id);
-            }
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-        if (!Auth::user()->school_id) {
-            if (Auth::user()->hasRole('Super Admin')) {
+            if (!Auth::user()->school_id) {
+                if (Auth::user()->hasRole('Super Admin')) {
+                    return $query;
+                }
+                if (Auth::user()->hasRole('Guardian')) {
+                    
+                    if (request('child_id')) {
+                        $childId = request('child_id');
+                        $studentAuth = Students::where('id',$childId)->first();
+                    } else {
+                        $childId = request('student_id');
+                        $studentAuth = User::where('id',$childId)->first();
+                    }
+                    
+                    
+                    return $query->where('school_id', $studentAuth->school_id);
+                }
                 return $query;
             }
-            if (Auth::user()->hasRole('Guardian')) {
-                $childId = request('child_id');
-                $studentAuth = Students::where('id',$childId)->first();
-                return $query->where('school_id', $studentAuth->school_id);
-            }
-            return $query;
         }
-
         return $query;
+    }
+
+    /**
+     * Get the class_section that owns the ExamResult
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function class_section()
+    {
+        return $this->belongsTo(ClassSection::class);
     }
 
 }

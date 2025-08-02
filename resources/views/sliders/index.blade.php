@@ -37,8 +37,38 @@
                                     <label for="">{{ __('link') }}</label>
                                     {!! Form::text('link', null, ['class' => 'form-control','placeholder' => __('link')]) !!}
                                 </div>
+
+                                <div class="form-group col-sm-12 col-md-4">
+                                    <label for="">{{ __('type') }}</label>
+                                    <div class="col-12 d-flex row">
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input" checked name="type" value="1" required="required">
+                                                {{ __('app') }}
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input" name="type" value="2" required="required">
+                                                {{ __('web') }}
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input" name="type" value="3" required="required">
+                                                {{ __('both') }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+
+
                             </div>
-                            <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -65,8 +95,9 @@
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="image" data-sortable="true" data-formatter="imageFormatter">{{ __('image') }}</th>
                                 <th scope="col" data-formatter="linkFormatter" data-field="link" data-sortable="true">{{ __('link') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-formatter="typeFormatter" data-field="type">{{ __('type') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
                                 <th scope="col" data-field="operate" data-events="sliderEvents" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>
@@ -113,6 +144,34 @@
                                     <label for="">{{ __('link') }}</label>
                                     {!! Form::text('link', null, ['class' => 'form-control edit_link', 'placeholder' => __('link')]) !!}
                                 </div>
+                                
+                                <div class="form-group">
+                                    <label for="">{{ __('type') }}</label>
+                                    <div class="col-12 d-flex row">
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input edit_type" name="type" value="1" required="required">
+                                                {{ __('app') }}
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input edit_type" name="type" value="2" required="required">
+                                                {{ __('web') }}
+                                            </label>
+                                        </div>
+
+                                        <div class="form-check form-check-inline">
+                                            <label class="form-check-label">
+                                                <input type="radio" class="form-check-input edit_type" name="type" value="3" required="required">
+                                                {{ __('both') }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary"

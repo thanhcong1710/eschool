@@ -24,7 +24,7 @@
                             <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                    data-url="{{ route('roles.list') }}" data-click-to-select="true" data-side-pagination="server"
                                    data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
-                                   data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                                   data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                    data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                    data-mobile-responsive="true" data-sort-name="id" data-toolbar="#toolbar" data-sort-order="desc"
                                    data-maintain-selected="true" data-export-data-type='all'

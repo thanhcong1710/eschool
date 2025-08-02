@@ -26,18 +26,29 @@ class FeesType extends Model
     }
 
     public function scopeOwner($query) {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+        if(Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->school_id) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;
+    }
+
+    public function session_years_trackings()
+    {
+        return $this->hasMany(SessionYearsTracking::class, 'modal_id', 'id')->where('modal_type', 'App\Models\FeesType');
     }
 }

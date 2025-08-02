@@ -22,18 +22,18 @@
                             <div class="row">
                                 <div class="form-group col-sm-12 col-md-5">
                                     <label>{{ __('name') }} <span class="text-danger">*</span></label>
-                                    <input type="text" name="name" placeholder="{{__('name')}}" class="form-control" required>
+                                    <input type="text" name="name" onkeypress="validateInput(event)" placeholder="{{__('name')}}" class="form-control" required>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-5">
                                     <label>{{ __('type') }} <span class="text-danger">*</span></label>
                                     <select name="type" id="type-field" class="form-control type-field">
-                                        <option value="text" selected>Text</option>
-                                        <option value="number">Numeric</option>
-                                        <option value="dropdown">Dropdown</option>
-                                        <option value="radio">Radio Button</option>
-                                        <option value="checkbox">Checkbox</option>
-                                        <option value="textarea">TextArea</option>
-                                        <option value="file">File Upload</option>
+                                        <option value="text" selected>{{__('Text')}}</option>
+                                        <option value="number">{{ __('Numeric') }}</option>
+                                        <option value="dropdown">{{ __('Dropdown') }}</option>
+                                        <option value="radio">{{ __('Radio Button') }}</option>
+                                        <option value="checkbox">{{ __('Checkbox') }}</option>
+                                        <option value="textarea">{{ __('TextArea') }}</option>
+                                        <option value="file">{{ __('File Upload') }}</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-2">
@@ -42,6 +42,14 @@
                                         <input type="checkbox" class="custom-control-input required-field" name="required" id="customSwitch1">
                                         <label class="custom-control-label" for="customSwitch1"></label>
                                     </div>
+                                </div>
+                                <div class="form-group col-sm-12 col-md-2">
+                                    <label>{{ __('user_type') }} <span class="text-danger">*</span></label>
+                                    <select name="user_type" class="form-control"> {{-- 1 => Student, 2 => Teacher/Staff --}}
+                                        <option value="" selected>{{ __('select_user_type') }}</option>
+                                        <option value="1">{{__('Student')}}</option>
+                                        <option value="2">{{__('Teacher')}}/{{__('Staff')}}</option>
+                                    </select>
                                 </div>
                             </div>
 
@@ -68,32 +76,7 @@
                             </div>
                             {{-- End Of Option Section --}}
 
-                            {{-- File Upload Option Section --}}
-                            {{-- <div class="file-option-section mt-4">
-                                <hr>
-                                <div class="row">
-                                    <div class="form-group col-sm-12 col-md-4">
-                                        <label>{{ __('gender') }} <span class="text-danger">*</span></label><br>
-                                        <div class="d-flex">
-                                            <div class="form-check form-check-inline">
-                                                <label class="form-check-label">
-                                                    {!! Form::radio('file-upload', 'single') !!}
-                                                    {{ __('single') }}
-                                                </label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <label class="form-check-label">
-                                                    {!! Form::radio('file-upload', 'multiple') !!}
-                                                    {{ __('multiple') }}
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div> --}}
-                            {{-- End of File Upload Option Section --}}
-
-                            <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
                         </form>
                     </div>
                 </div>
@@ -106,13 +89,23 @@
                         <h4 class="card-title">
                             {{ __('list') . ' ' . __('form-fields') }}
                         </h4>
+                        <div class="row mt-3" id="toolbar">
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label class="filter-menu">{{ __('user_type') }} <span class="text-danger">*</span></label>
+                                <select required name="filter_all_user_type" class="form-control" id="filter_all_user_type">
+                                    <option value="">{{ __('all_user_type') }}</option>
+                                    <option value="1">{{__('Student')}}</option>
+                                    <option value="2">{{__('Teacher')}}/{{__('Staff')}}</option>
+                                </select>
+                            </div> 
+                        </div>
                         <div class="d-flex justify-content-end">
                             <button type="button" class="btn btn-secondary" id="preview-fields" data-toggle="modal" data-target="#previewFieldModal">{{__('preview').' '.__('form-fields')}}</button>
                         </div>
                         <div class="col-12 mt-4 text-right">
-                            <b><a href="#" class="table-list-type active mr-2" data-value="All">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-value="Trashed">{{__("Trashed")}}</a>
+                            <b><a href="#" class="table-list-type active mr-2" data-id="0">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{__("Trashed")}}</a>
                         </div>
-                        <table aria-describedby="mydesc" class='table' id='table_list'
+                        <table aria-describedby="mydesc" class='table reorder-table-row' id='table_list'
                                data-toggle="table" data-url="{{ route('form-fields.show', 1) }}"
                                data-click-to-select="true" data-side-pagination="server"
                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
@@ -121,24 +114,24 @@
                                data-mobile-responsive="true" data-use-row-attr-func="true"
                                data-reorderable-rows="true" data-maintain-selected="true"
                                data-export-data-type='all' data-export-options='{ "fileName": "{{__('form-fields')}}-<?= date(' d-m-y') ?>" ,"ignoreColumn":["operate"]}'
-                               data-show-export="true" data-query-params="queryParams" data-escape="true">
+                               data-show-export="true" data-query-params="FormFieldQueryParams" data-escape="true">
                             <thead>
                             <tr>
                                 <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{ __('id') }}</th>
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="name">{{ __('name') }}</th>
                                 <th scope="col" data-field="type">{{ __('type') }}</th>
+                                <th scope="col" data-field="user_type">{{ __('user_type') }}</th>
                                 <th scope="col" data-field="is_required" data-formatter="yesAndNoStatusFormatter">{{ __('is').' '.__('required') }}</th>
                                 <th scope="col" data-field="default_values" data-formatter="formFieldDefaultValuesFormatter">{{ __('Default Values') }}</th>
-                                <th scope="col" data-field="other" data-sortable="false" data-visible="false" data-formatter="formFieldOtherValueFormatter">{{ __('other') }}</th>
                                 <th scope="col" data-field="rank" data-sortable="false">{{ __('rank') }}</th>
                                 <th scope="col" data-field="operate" data-sortable="false" data-events="formFieldsEvents" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>
                         </table>
                         <span class="d-block mb-4 mt-2 text-danger small">{{ __('draggable_rows_notes') }}</span>
-                        <div class="mt-1">
-                            <button id="change-order-form-field" class="btn btn-theme">Update Rank</button>
+                        <div class="mt-1 d-none d-md-block">
+                            <button id="change-order-form-field" class="btn btn-theme">{{ __('update_rank') }}</button>
                         </div>
                     </div>
                 </div>
@@ -207,13 +200,15 @@
                                     @elseif($data->type == 'checkbox')
                                         <div class="row form-check-inline">
                                             @foreach ($data->default_values as $value)
-                                                <div class="col-md-2 form-check mr-4">
-                                                    <label class="form-check-label">
-                                                        <input type="checkbox" class="form-check-input chkclass" value="{{$value}}">{{ $value }}
+                                                <div class="col-6 col-md-4 form-check mr-4">
+                                                    <label class="form-check-label" style="white-space: normal; word-wrap: break-word;">
+                                                        <input type="checkbox" class="form-check-input chkclass" value="{{ $value }}">
+                                                        {{ $value }}
                                                     </label>
                                                 </div>
                                             @endforeach
                                         </div>
+                                    
 
                                         {{-- Textarea Field --}}
                                     @elseif($data->type == 'textarea')
@@ -257,7 +252,7 @@
                     <div class="modal-body">
                         <div class="form-group col-sm-12">
                             <label>{{ __('name') }} <span class="text-danger">*</span></label>
-                            <input type="text" name="name" id="edit-name" placeholder="{{__('name')}}" class="form-control" required>
+                            <input type="text" name="name" onkeypress="validateInput(event)" id="edit-name" placeholder="{{__('name')}}" class="form-control" required>
                         </div>
                         <div class="form-group col-sm-12">
                             <label>{{ __('type') }} <span class="text-danger">*</span></label>
@@ -318,6 +313,16 @@
         function formSuccessFunction() {
             $('#type-field').val('text').trigger('change');
             $('[data-repeater-item]').slice(2).remove();
+        }
+
+        function validateInput(event) {
+            // Get the ASCII code of the key that was pressed
+            var charCode = event.which || event.keyCode;
+
+            // Allow letters (A-Z, a-z) and space (ASCII code 32)
+            if (!(charCode >= 65 && charCode <= 90) && !(charCode >= 97 && charCode <= 122) && !(charCode === 32)) {
+                event.preventDefault(); // Prevent invalid character input
+            }
         }
     </script>
 @endsection

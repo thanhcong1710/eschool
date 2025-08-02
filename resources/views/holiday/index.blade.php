@@ -40,7 +40,8 @@
                                         {!! Form::textarea('description', null, ['rows' => '2', 'placeholder' => __('description'), 'class' => 'form-control']) !!}
                                     </div>
                                 </div>
-                                <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                             </form>
                         </div>
                     </div>
@@ -62,6 +63,11 @@
                                         @endforeach
                                     </select>
                                 </div>
+
+                                <div class="form-group col-12 col-sm-12 col-md-3 col-lg-3">
+                                    <label for="filter_month_id" class="filter-menu">{{__("month")}}</label>
+                                    {!! Form::select('month', ['0' => 'All'] + $months, null, ['class' => 'form-control', 'id' => 'filter_month']) !!}
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-12">
@@ -70,19 +76,19 @@
                                            data-side-pagination="server" data-pagination="true"
                                            data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
                                            data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true"
-                                           data-fixed-columns="true" data-fixed-number="2" data-fixed-right-number="1"
+                                           data-fixed-columns="false" data-fixed-number="2" data-fixed-right-number="1"
                                            data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
                                            data-sort-order="desc" data-maintain-selected="true"
-                                           data-export-data-type='all'
+                                           data-export-data-type='all' data-show-export="true"
                                            data-export-options='{ "fileName": "holiday-list-<?= date('d-m-y') ?>","ignoreColumn": ["operate"]}'
                                            data-query-params="holidayQueryParams">
                                         <thead>
                                         <tr>
                                             <th scope="col" data-field="id" data-sortable="true" data-visible="false"> {{ __('id') }} </th>
                                             <th scope="col" data-field="no"> {{ __('no.') }} </th>
-                                            <th scope="col" data-field="date" data-width="150"> {{ __('date') }} </th>
+                                            <th scope="col" data-field="date" data-formatter="dateFormatter" data-width="150"> {{ __('date') }} </th>
                                             <th scope="col" data-field="title">{{ __('title') }} </th>
-                                            <th scope="col" data-field="description">{{ __('description') }}</th>
+                                            <th scope="col" data-events="tableDescriptionEvents" data-formatter="descriptionFormatter" data-field="description">{{ __('description') }}</th>
                                             @if (Auth::user()->can('holiday-edit') || Auth::user()->can('holiday-delete'))
                                                 <th data-events="holidayEvents" data-width="150" scope="col" data-field="operate">{{ __('action') }}</th>
                                             @endif
@@ -135,7 +141,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                     </div>
                 </form>

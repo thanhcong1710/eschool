@@ -11,6 +11,8 @@ class PaymentTransaction extends Model {
 
     protected $fillable = ['user_id', 'amount', 'payment_gateway', 'order_id', 'payment_id', 'payment_signature', 'payment_status', 'school_id'];
 
+    // protected $connection = 'mysql';
+
     public function student() {
         return $this->belongsTo(Students::class, 'student_id')->withTrashed();
     }
@@ -57,5 +59,22 @@ class PaymentTransaction extends Model {
     public function subscription_bill()
     {
         return $this->hasOne(SubscriptionBill::class);
+    }
+
+    /**
+     * Get the addon_subscription associated with the PaymentTransaction
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasOne
+     */
+    public function addon_subscription()
+    {
+        return $this->hasOne(AddonSubscription::class);
+    }
+
+    public function getConnectionName()
+    {
+        // Replace this with your logic to determine the connection name
+        // For example, you might get it from session or config
+        return session('db_connection_name') ?? config('database.default');
     }
 }

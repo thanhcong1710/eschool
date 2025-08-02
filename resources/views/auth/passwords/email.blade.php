@@ -49,7 +49,18 @@
 
     <!DOCTYPE html>
 <html lang="en">
-
+    @php
+    $lang = Session::get('language');
+@endphp
+@if($lang)
+    @if ($lang->is_rtl)
+        <html lang="en" dir="rtl">
+    @else
+        <html lang="en" dir="ltl">
+    @endif
+@else
+    <html lang="en" dir="ltl">
+@endif
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
@@ -80,16 +91,19 @@
                         @endif
                         <form method="POST" action="{{ route('password.email') }}">
                             @csrf
+
                             <div class="form-group">
+                                <label>{{ __('school_code') }}</label>
+                                <input id="school_code" type="school_code" class="form-control form-control-lg" name="school_code" value="{{ old('school_code') }}" autocomplete="school_code" autofocus placeholder="{{ __('school_code') }}">
+                            </div>
+
+                            <div class="form-group">
+
                                 <label>{{ __('email') }}</label>
-                                {{-- <input type="text" name="username" required class="form-control form-control-lg" placeholder="{{__('username')}}"> --}}
-                                <input id="email" type="email" class="form-control form-control-lg" name="email"
-                                       value="{{ old('email') }}" required autocomplete="email" autofocus
-                                       placeholder="{{ __('email') }}">
+                                <input id="email" type="email" class="form-control form-control-lg" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="{{ __('email') }}">
                             </div>
                             <div class="mt-3">
-                                <input type="submit" name="btnlogin" value="{{ __('Send Password Reset Link') }}"
-                                       class="btn btn-block btn-theme btn-lg font-weight-medium auth-form-btn"/>
+                                <input type="submit" value="{{ __('Send Password Reset Link') }}" class="btn btn-block btn-theme"/>
                             </div>
                         </form>
                     </div>

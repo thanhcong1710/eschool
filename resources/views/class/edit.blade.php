@@ -80,7 +80,8 @@
                                 </div>
                                 <hr>
 
-                                <input class="btn btn-theme mt-4" type="submit" value={{ __('submit') }} />
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                             </div>
                         </form>
                     </div>

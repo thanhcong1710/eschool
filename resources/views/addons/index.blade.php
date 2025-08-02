@@ -30,7 +30,7 @@
 
                                 <div class="form-group col-sm-12 col-md-3">
                                     <label for="">{{ __('price') }} <span class="text-danger">*</span></label>
-                                    <input type="number" name="price" class="form-control" required placeholder="{{ __('price') }}" min="0">
+                                    <input type="number" name="price" class="form-control" required placeholder="{{ __('price') }}" min="1">
                                 </div>
                                 <div class="col-sm-12 col-md-12 mt-3">
                                     <label for="">{{ __('features') }}</label>
@@ -44,7 +44,9 @@
                                     </div>
                                 @endforeach
                             </div>
-                            <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
+                            {{-- <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}> --}}
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -56,14 +58,14 @@
                             {{ __('list').' '.__('addons') }}
                         </h4>
                         <div class="col-12 text-right">
-                            <b><a href="#" class="table-list-type active mr-2" data-value="All">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-value="Trashed">{{__("Trashed")}}</a>
+                            <b><a href="#" class="table-list-type active mr-2" data-id="0">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{__("Trashed")}}</a>
                         </div>
                         <table aria-describedby="mydesc" class='table' id='table_list'
                                data-toggle="table" data-url="{{ route('addons.show',1) }}"
                                data-click-to-select="true" data-side-pagination="server"
                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
                                data-search="true" data-toolbar="#toolbar" data-show-columns="true"
-                               data-show-refresh="true" data-fixed-columns="true" data-fixed-number="2"
+                               data-show-refresh="true" data-fixed-columns="false" data-fixed-number="2"
                                data-fixed-right-number="1" data-trim-on-search="false"
                                data-mobile-responsive="true" data-sort-name="id"
                                data-sort-order="desc" data-maintain-selected="true"

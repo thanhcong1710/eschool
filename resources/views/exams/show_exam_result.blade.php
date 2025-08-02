@@ -24,13 +24,13 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="form-group col-12 col-sm-12 col-md-3 col-lg-3">
+                            <div class="form-group col-12 col-sm-12 col-md-5 col-lg-3">
                                 <label for="filter_exam_id" class="filter-menu">{{__("exam")}}</label>
                                 <select name="exam" class="form-control result_exam" id="filter_exam_id" class="form-control">
                                     <option value="">{{ __('select') . ' ' . __('exam') }}</option>
-                                    <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
+                                    <option value="data-not-found" style="display: none;">-- {{ __('no_data_found') }} --</option>
                                     @foreach ($exams as $exam)
-                                        <option data-session-year="{{ $exam->session_year_id }}" value="{{ $exam->id }}">{{ $exam->name }}</option>
+                                        <option data-session-year="{{ $exam->session_year_id }}" data-class-id="{{ $exam->class_id }}" value="{{ $exam->id }}">{{ $exam->prefix_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -38,8 +38,9 @@
                                 <label for="filter_class_section_id" class="filter-menu">{{__("Class Section")}}</label>
                                 <select name="filter_class_section_id" id="filter_class_section_id" class="form-control">
                                     <option value="">{{ __('select_class_section') }}</option>
+                                    <option value="data-not-found" style="display: none;">-- {{ __('no_data_found') }} --</option>
                                     @foreach ($classSections as $classSection)
-                                        <option value="{{ $classSection->id }}">{{ $classSection->full_name }}</option>
+                                        <option value="{{ $classSection->id }}" data-class-id="{{ $classSection->class_id }}">{{ $classSection->full_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -67,9 +68,9 @@
                                         <th scope="col" data-field="obtained_marks" data-sortable="true">{{ __('obtained_marks') }}</th>
                                         <th scope="col" data-field="percentage" data-sortable="true">{{ __('percentage') }}</th>
                                         <th scope="col" data-field="grade" data-sortable="true">{{ __('grade') }}</th>
-                                        <th scope="col" data-field="created_at" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
-                                        <th scope="col" data-field="updated_at" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
-                                        @can('class-teacher')
+                                        <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
+                                        <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
+                                        @can('exam-result-edit')
                                             <th scope="col" data-field="operate" data-escape="false" data-events="examResultEvents" data-escape="false">{{ __('action') }}</th>
                                         @endcan
                                     </tr>
@@ -96,7 +97,7 @@
                         <form class="pt-3 edit-exam-result-marks-form" method="post" action="{{ route('exams.update-result-marks') }}" novalidate="novalidate">
                             <input type="hidden" name="edit_id" id="edit_id" value=""/>
                             <div class="modal-body">
-                                <h5 title="All Subject's marks all compulsory" class="mb-3">
+                                <h5 title="{{ __('All Subjects marks all compulsory') }}" class="mb-3">
                                     <span class="student_name"></span>
                                     <span class="fa fa-info-circle pl-2 mx-2"></span>
                                 </h5>

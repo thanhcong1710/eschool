@@ -15,4 +15,14 @@ class FeesAdvance extends Model
         'parent_id',
         'amount'
     ];
+
+    /**
+     * Get the user that owns the FeesAdvance
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'student_id');
+    }
 }

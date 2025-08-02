@@ -24,7 +24,7 @@ class File extends Model {
     ];
 
 
-    protected $appends = array('file_extension', 'type_detail');
+    protected $appends = array('file_extension', 'type_detail','youtube_url_action');
 
     protected static function boot() {
         parent::boot();
@@ -70,16 +70,18 @@ class File extends Model {
     }
 
     public function scopeOwner($query) {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+        if(Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;
@@ -104,4 +106,35 @@ class File extends Model {
         }
         return "";
     }
+
+    public function getYoutubeUrlActionAttribute() {
+        if (!empty($this->file_url)) {
+            // return pathinfo(url(Storage::url($this->file_url)), PATHINFO_EXTENSION);
+            $pattern = '/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/';
+    
+            // Check if the URL matches the pattern
+            if (preg_match($pattern, $this->file_url, $matches)) {
+                // Extract Video ID
+                $videoId = $matches[1];
+                
+                // Construct Embed URL
+                $embedUrl = "https://www.youtube.com/embed/$videoId";
+                $img = "http://img.youtube.com/vi/".$videoId."/hqdefault.jpg";
+                $data = [
+                    'embed_url' => $embedUrl,
+                    'img' => $img
+                ];
+                return (object)$data;
+                
+                return $embedUrl;
+            }
+        
+            // Return null if URL doesn't match the pattern
+            return null;
+        }
+
+        return "";
+    }
+
+
 }

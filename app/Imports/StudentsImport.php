@@ -7,6 +7,7 @@ use App\Repositories\SessionYear\SessionYearInterface;
 use App\Repositories\Student\StudentInterface;
 use App\Repositories\Subscription\SubscriptionInterface;
 use App\Repositories\User\UserInterface;
+use App\Rules\TrimmedEnum;
 use App\Services\CachingService;
 use App\Services\ResponseService;
 use App\Services\UserService;
@@ -27,11 +28,13 @@ class StudentsImport implements WithMultipleSheets
 {
     private mixed $classSectionID;
     private mixed $sessionYearID;
+    private mixed $is_send_notification;
 
-    public function __construct($classSectionID, $sessionYearID)
+    public function __construct($classSectionID, $sessionYearID, $is_send_notification)
     {
         $this->classSectionID = $classSectionID;
         $this->sessionYearID = $sessionYearID;
+        $this->is_send_notification = $is_send_notification;
     }
 
     /**
@@ -40,7 +43,7 @@ class StudentsImport implements WithMultipleSheets
     public function sheets(): array
     {
         return [
-            new FirstSheetImport($this->classSectionID, $this->sessionYearID)
+            new FirstSheetImport($this->classSectionID, $this->sessionYearID, $this->is_send_notification)
         ];
     }
 }
@@ -49,17 +52,20 @@ class FirstSheetImport implements ToCollection, WithHeadingRow
 {
     private mixed $classSectionID;
     private mixed $sessionYearID;
+    private mixed $is_send_notification;
 
     /**
      * @param $classSectionID
      * @param $sessionYearID
+     * @param $is_send_notification
      */
 
     // Import the Class Section and Repositories
-    public function __construct($classSectionID, $sessionYearID)
+    public function __construct($classSectionID, $sessionYearID, $is_send_notification)
     {
         $this->classSectionID = $classSectionID;
         $this->sessionYearID = $sessionYearID;
+        $this->is_send_notification = $is_send_notification;
     }
 
     /**
@@ -80,7 +86,7 @@ class FirstSheetImport implements ToCollection, WithHeadingRow
             '*.first_name'     => 'required',
             '*.last_name'      => 'required',
             '*.mobile'         => 'nullable|regex:/^([0-9\s\-\+\(\)]*)$/',
-            '*.gender'         => 'required|in:male,female,Male,Female',
+            '*.gender'         => ['required', new TrimmedEnum(['male', 'female', 'Male', 'Female'])],
             '*.dob'            => 'required|date',
             '*.admission_date' => 'required|date',
             '*.current_address'      => 'required',
@@ -90,8 +96,18 @@ class FirstSheetImport implements ToCollection, WithHeadingRow
             '*.guardian_last_name'  => 'required',
             '*.guardian_mobile'     => 'required|regex:/^([0-9\s\-\+\(\)]*)$/',
         ],[
+            '*.first_name.required' => 'Please enter the first name.',
+            '*.last_name.required' => 'Please enter the last name.',
+            '*.mobile.required' => 'Please enter the mobile number.',
+            '*.gender.required' => 'Please select the gender.',
             '*.dob.date' => 'Please ensure that the dob date format you use is either DD-MM-YYYY or MM/DD/YYYY.',
             '*.admission_date.date' => 'Please ensure that the admission date format you use is either DD-MM-YYYY or MM/DD/YYYY.',
+            '*.guardian_email.required' => 'Please enter the guardian email.',
+            '*.guardian_email.email' => 'Please enter a valid email address.',
+            '*.guardian_first_name.required' => 'Please enter the guardian first name.',
+            '*.guardian_last_name.required' => 'Please enter the guardian last name.',
+            '*.guardian_mobile.required' => 'Please enter the guardian mobile number.',
+            
         ]);
 
         //             If Validation fails then this will throw the ValidationFail Exception
@@ -131,8 +147,7 @@ class FirstSheetImport implements ToCollection, WithHeadingRow
 
             $guardian = $userService->createOrUpdateParent($row['guardian_first_name'], $row['guardian_last_name'], $row['guardian_email'], $row['guardian_mobile'], $row['guardian_gender']);
             $get_student = $student->builder()->where('session_year_id', $sessionYear->id)->select('id')->latest('id')->pluck('id')->first();
-            $admission_no = $sessionYear->name . Auth::user()->school_id . ($get_student + 1);
-
+            $admission_no = $sessionYear->name .'0'.  Auth::user()->school_id .'0'. ($get_student + 1);
             $extraDetails = array();
             // Check that Extra Details Exists
             if (!empty($extraDetailsFields)) {
@@ -180,7 +195,7 @@ class FirstSheetImport implements ToCollection, WithHeadingRow
             }
             //                $userService->createOrUpdateStudentUser($row['first_name'], $row['last_name'], $admission_no, $row['mobile'], $row['dob'], $row['gender'], null, $this->class_section_id, now(), $extraDetails, null, $guardian->id);
             try {
-                $userService->createStudentUser($row['first_name'], $row['last_name'], $admission_no, $row['mobile'], $row['dob'], $row['gender'], null, $this->classSectionID, $row['admission_date'],$row['current_address'],$row['permanent_address'], $sessionYear->id, $guardian->id, $extraDetails, 0);
+                $userService->createStudentUser($row['first_name'], $row['last_name'], $admission_no, $row['mobile'], $row['dob'], $row['gender'], null, $this->classSectionID, $row['admission_date'],$row['current_address'],$row['permanent_address'], $sessionYear->id, $guardian->id, $extraDetails, 0, $this->is_send_notification);
             } catch (Throwable $e) {
                 // IF Exception is TypeError and message contains Mail keywords then email is not sent successfully
                 if ($e instanceof TypeError && Str::contains($e->getMessage(), [

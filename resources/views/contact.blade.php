@@ -8,7 +8,7 @@
 </head>
 <body>
     <div>
-        <h3>User Name :- </h3>{{ $title }}
+        <h3>User Name :- </h3>{{ $name }}
     </div>
     <div>
         <h3>User Email : - </h3>{{ $email }}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\TimetableCollection;
 use App\Http\Resources\UserDataResource;
+use App\Models\School;
 use App\Repositories\Announcement\AnnouncementInterface;
 use App\Repositories\Assignment\AssignmentInterface;
 use App\Repositories\AssignmentSubmission\AssignmentSubmissionInterface;
@@ -18,20 +19,24 @@ use App\Repositories\Lessons\LessonsInterface;
 use App\Repositories\OnlineExam\OnlineExamInterface;
 use App\Repositories\PaymentConfiguration\PaymentConfigurationInterface;
 use App\Repositories\PaymentTransaction\PaymentTransactionInterface;
+use App\Repositories\SchoolSetting\SchoolSettingInterface;
 use App\Repositories\Sliders\SlidersInterface;
 use App\Repositories\Student\StudentInterface;
 use App\Repositories\SubjectTeacher\SubjectTeacherInterface;
+use App\Repositories\SystemSetting\SystemSettingInterface;
 use App\Repositories\Timetable\TimetableInterface;
 use App\Repositories\Topics\TopicsInterface;
 use App\Repositories\User\UserInterface;
 use App\Services\CachingService;
 use App\Services\FeaturesService;
+use App\Services\GeneralFunctionService;
 use App\Services\Payment\PaymentService;
 use App\Services\ResponseService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use DateTime;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use JetBrains\PhpStorm\NoReturn;
@@ -60,9 +65,11 @@ class ParentApiController extends Controller {
     private FeesPaidInterface $feesPaid;
     private SubjectTeacherInterface $subjectTeachers;
     private PaymentConfigurationInterface $paymentConfigurations;
-    private FeaturesService $featureService;
+    private SystemSettingInterface $systemSetting;
+    private SchoolSettingInterface $schoolSetting;
+    private GeneralFunctionService $generalFunction;
 
-    public function __construct(StudentInterface $student, UserInterface $user, AssignmentInterface $assignment, AssignmentSubmissionInterface $assignmentSubmission, CachingService $cache, TimetableInterface $timetable, ExamInterface $exam, ExamResultInterface $examResult, LessonsInterface $lesson, TopicsInterface $lessonTopic, AttendanceInterface $attendance, HolidayInterface $holiday, SubjectTeacherInterface $subjectTeacher, AnnouncementInterface $announcement, OnlineExamInterface $onlineExam, FeesInterface $fees, PaymentTransactionInterface $paymentTransaction, SlidersInterface $sliders, PaymentConfigurationInterface $paymentConfigurations, FeesPaidInterface $feesPaid, FeaturesService $featuresService, SubjectTeacherInterface $subjectTeachers) {
+    public function __construct(StudentInterface $student, UserInterface $user, AssignmentInterface $assignment, AssignmentSubmissionInterface $assignmentSubmission, CachingService $cache, TimetableInterface $timetable, ExamInterface $exam, ExamResultInterface $examResult, LessonsInterface $lesson, TopicsInterface $lessonTopic, AttendanceInterface $attendance, HolidayInterface $holiday, SubjectTeacherInterface $subjectTeacher, AnnouncementInterface $announcement, OnlineExamInterface $onlineExam, FeesInterface $fees, PaymentTransactionInterface $paymentTransaction, SlidersInterface $sliders, PaymentConfigurationInterface $paymentConfigurations, FeesPaidInterface $feesPaid, SubjectTeacherInterface $subjectTeachers, SystemSettingInterface $systemSetting, SchoolSettingInterface $schoolSetting, GeneralFunctionService $generalFunction) {
         $this->student = $student;
         $this->user = $user;
         $this->assignment = $assignment;
@@ -83,17 +90,54 @@ class ParentApiController extends Controller {
         $this->sliders = $sliders;
         $this->paymentConfigurations = $paymentConfigurations;
         $this->feesPaid = $feesPaid;
-        $this->featureService = $featuresService;
         $this->subjectTeachers = $subjectTeachers;
+        $this->systemSetting = $systemSetting;
+        $this->schoolSetting = $schoolSetting;
+        $this->generalFunction = $generalFunction;
     }
 
     #[NoReturn] public function login(Request $request) {
+
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|email',
+            'password' => 'required',
+        ], [
+            'email.required' => 'The email field cannot be empty.',
+            'email.email' => 'Please provide a valid email address.',
+            'password.required' => 'The password field cannot be empty.',
+        ]);
+        
+        if ($validator->fails()) {
+            ResponseService::validationError($validator->errors()->first());
+        }
+
+        $school = School::on('mysql')->where('code',$request->school_code)->first();
+
+        if ($school) {
+            DB::setDefaultConnection('school');
+            Config::set('database.connections.school.database', $school->database_name);
+            DB::purge('school');
+            DB::connection('school')->reconnect();
+            DB::setDefaultConnection('school');
+        } else {
+            ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+        }
+
         if (Auth::attempt([
             'email'    => $request->email,
             'password' => $request->password
         ])) {
-            $auth = Auth::user()->load('child.user', 'child.class_section.class', 'child.class_section.section', 'child.class_section.medium', 'child.user.school');
+            // $auth = Auth::user()->load('child.user', 'child.class_section.class', 'child.class_section.section', 'child.class_section.medium', 'child.user.school');
+            
+            // Only active child
+            $auth = Auth::user()->load(['child' => function($q) {
+                $q->whereHas('user.student', function($q) {
+                    $q->where('application_status',1);
+                })->with('class_section.class', 'class_section.section', 'class_section.medium', 'user.school');
+            }]);
+            // ==============================
 
+            // $auth->assignRole('Guardian');
             if (!$auth->hasRole('Guardian')) {
                 ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
             }
@@ -103,9 +147,11 @@ class ParentApiController extends Controller {
                 $auth->save();
             }
 
+            // session(['database_name' => $school->database_name]);
             $token = $auth->createToken($auth->first_name)->plainTextToken;
-
+            // $token = $auth->createToken('API Token', ['school_code' => $request->school_code])->plainTextToken;
             $user = $auth;
+            $request->headers->set('school_code',$request->school_code);
             ResponseService::successResponse('User logged-in!', new UserDataResource($user), ['token' => $token], config('constants.RESPONSE_CODE.LOGIN_SUCCESS'));
         } else {
             ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
@@ -165,7 +211,6 @@ class ParentApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-//            $children = $request->user()->guardianRelationChild()->where('id', $request->child_id)->first();
             $children = Auth::user()->guardianRelationChild()->where('id', $request->child_id)->whereHas('user', function ($q) {
                 $q->whereNull('deleted_at');
             })->first();
@@ -173,7 +218,37 @@ class ParentApiController extends Controller {
             if (empty($children)) {
                 ResponseService::errorResponse("Child's Account is not Active.Contact School Support", NULL, config('constants.RESPONSE_CODE.INACTIVE_CHILD'));
             }
-            $timetable = $this->timetable->builder()->where('class_section_id', $children->class_section_id)->with('subject_teacher')->orderBy('day')->orderBy('start_time')->get();
+
+            // Get student's subjects
+            $studentSubjects = $children->currentSemesterSubjects();
+            
+            $core_subjects = $studentSubjects["core_subject"]->pluck('id')->toArray();
+            
+            $elective_subjects = $studentSubjects["elective_subject"] ?? [];
+            
+            if ($elective_subjects) {
+                $elective_subjects = $elective_subjects->pluck('class_subject.subject.id')->toArray();
+            }
+            
+            $subjectIds = array_merge($core_subjects, $elective_subjects);
+            
+            // Get timetable with filtered subjects
+            $timetable = $this->timetable->builder()
+                ->where('class_section_id', $children->class_section_id)
+                ->where(function($query) use ($subjectIds) {
+                    $query->whereHas('subject_teacher', function($q) use ($subjectIds) {
+                        $q->whereIn('subject_id', $subjectIds);
+                    })
+                    ->orWhereDoesntHave('subject_teacher');
+                })
+                ->with([
+                    'subject_teacher.subject:id,name,type,code,bg_color,image',
+                    'subject_teacher.teacher:id,first_name,last_name'
+                ])
+                ->orderBy('day')
+                ->orderBy('start_time')
+                ->get();
+                
             ResponseService::successResponse("Timetable Fetched Successfully", new TimetableCollection($timetable));
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);
@@ -641,7 +716,12 @@ class ParentApiController extends Controller {
                 'exam.timetable:id,exam_id,start_time,end_time',
                 'session_year',
                 'exam.marks' => function ($q) use ($studentData) {
-                    $q->where('student_id', $studentData->user_id);
+                    $q->where('student_id', $studentData->user_id)
+                    ->with(['class_subject' => function($q) {
+                        $q->withTrashed()->with(['subject' => function($q) {
+                            $q->withTrashed();
+                        }]);
+                    }]);;
                 }
             ])->where('student_id', $studentData->user_id)->get();
 
@@ -1173,10 +1253,6 @@ class ParentApiController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-//            $student = $this->student->builder()->where('id', $request->child_id)->with(['class_section', 'user' => function ($q) {
-//                $q->with('fees_paid', 'compulsory_fees');
-//            }])->firstOrFail();
-
             $student = Auth::user()->guardianRelationChild()->where('id', $request->child_id)->whereHas('user', function ($q) {
                 $q->whereNull('deleted_at');
             })->first();
@@ -1200,13 +1276,6 @@ class ParentApiController extends Controller {
             $currentDateTimestamp = new DateTime(date('Y-m-d'));
 
             foreach ($fees as $fee) {
-
-                //                if($fee->fees_class_type!=null){
-                //                    if(count($fee->fees_class_type) > 0) {
-                //                        ;
-                //                    }
-                //                }
-
                 $feesDateTimestamp = new DateTime($fee->due_date);
 
                 // Set Optional Fees Data in response
@@ -1222,11 +1291,8 @@ class ParentApiController extends Controller {
 
 
                 // Set Compulsory Fees Data in response
-                $fee->due_charges_amount = 0;
                 if (count($fee->compulsory_fees) > 0) {
-                    if ($currentDateTimestamp > $feesDateTimestamp) {
-                        $fee->due_charges_amount = ($fee->total_compulsory_fees * $fee->due_charges) / 100;
-                    }
+                    $fee->is_overdue = $currentDateTimestamp > $feesDateTimestamp; // true/false
                     collect($fee->compulsory_fees)->map(function ($compulsoryFees) use ($student) {
                         $isCompulsoryFeesPaid = $student->user->compulsory_fees->first(function ($compulsoryFeesPaid) use ($student) {
                             return $compulsoryFeesPaid->type == 'Full Payment' && $compulsoryFeesPaid->student_id == $student->user->id;
@@ -1240,52 +1306,90 @@ class ParentApiController extends Controller {
                 if (count($fee->installments) > 0) {
                     $totalFeesAmount = $fee->total_compulsory_fees;
                     $totalInstallments = count($fee->installments);
+                    $paidInstallments = 0;
+                    $totalPaidAmount = 0;
 
-                    $previousInstallmentDate = new DateTime('now -1 day');
-                    collect($fee->installments)->map(function ($installment) use ($student, &$totalFeesAmount, &$totalInstallments, $currentDateTimestamp, &$previousInstallmentDate) {
-                        $installmentDueDateTimestamp = new DateTime($installment['due_date']);
-
+                    // First pass - identify paid installments
+                    foreach ($fee->installments as $installment) {
                         $installmentPaid = $student->user->compulsory_fees->first(function ($compulsoryFeesPaid) use ($installment, $student) {
                             return $compulsoryFeesPaid->type == "Installment Payment" && $compulsoryFeesPaid->installment_id == $installment->id && $compulsoryFeesPaid->student_id == $student->user->id;
                         });
 
-                        // If installment is not Paid
                         if (!empty($installmentPaid)) {
-                            --$totalInstallments;
-                            $totalFeesAmount -= $installmentPaid->amount;
+                            $paidInstallments++;
+                            $totalPaidAmount += $installmentPaid->amount;
+                            $installment['is_paid'] = true;
                             $installment['minimum_amount'] = $installmentPaid->amount;
                             $installment['maximum_amount'] = $installmentPaid->amount;
                             $installment['due_charges_amount'] = $installmentPaid->due_charges;
                         } else {
-                            // If installment is paid
-                            $installment['minimum_amount'] = $totalFeesAmount / $totalInstallments;
-                            $installment['maximum_amount'] = $totalFeesAmount;
+                            $installment['is_paid'] = false;
+                        }
+                    }
 
-                            //Calculate Due Charges amount for not paid installment
+                    // Calculate remaining amount and installments
+                    $remainingAmount = $totalFeesAmount - $totalPaidAmount;
+                    $remainingInstallments = $totalInstallments - $paidInstallments;
+
+                    // Second pass - handle unpaid installments
+                    if ($remainingInstallments > 0) {
+                        // Equal amount for first (n-1) unpaid installments
+                        $equalInstallmentAmount = 0;
+                        if ($remainingInstallments > 1) {
+                            $equalInstallmentAmount = floor(($remainingAmount / $remainingInstallments) * 100) / 100;
+                        }
+
+                        $unpaidInstallmentsProcessed = 0;
+                        $amountDistributed = 0;
+
+                        foreach ($fee->installments as $index => $installment) {
+                            if ($installment['is_paid']) {
+                                continue; // Skip paid installments
+                            }
+
+                            $unpaidInstallmentsProcessed++;
+                            $installmentDueDateTimestamp = new DateTime($installment['due_date']);
+
+                            // For last unpaid installment, use remaining balance
+                            if ($unpaidInstallmentsProcessed == $remainingInstallments) {
+                                $lastInstallmentAmount = $remainingAmount - $amountDistributed;
+                                $installment['minimum_amount'] = $lastInstallmentAmount;
+                                $installment['maximum_amount'] = $remainingAmount;
+                            } else {
+                                // For other unpaid installments, use equal amount
+                                $installment['minimum_amount'] = $equalInstallmentAmount;
+                                $installment['maximum_amount'] = $remainingAmount - $amountDistributed;
+                                $amountDistributed += $equalInstallmentAmount;
+                            }
+
+                            // Calculate due charges if applicable
                             if ($currentDateTimestamp > $installmentDueDateTimestamp) {
-                                $installment['due_charges_amount'] = ($installment['minimum_amount'] * $installment['due_charges']) / 100;
+                                if ($installment->due_charges_type == "percentage") {
+                                    $installment['due_charges_amount'] = ($installment['minimum_amount'] * $installment['due_charges']) / 100;
+                                } else if ($installment->due_charges_type == "fixed") {
+                                    $installment['due_charges_amount'] = $installment->due_charges;
+                                }
                             } else {
                                 $installment['due_charges_amount'] = 0;
                             }
                         }
-                        $installment['is_paid'] = $installmentPaid ? true : false;
+                    }
 
-                        //identify which installment is the correct installment
-
-                        /* Current date should be less then the due date && greater than the due date of previous installments  */
-                        /* In case of first installment , previous installment date will be current date - 1 */
+                    $previousInstallmentDate = new DateTime('now -1 day');
+                    // Third pass - identify current installment
+                    foreach ($fee->installments as $installment) {
+                        $installmentDueDateTimestamp = new DateTime($installment['due_date']);
+                        
+                        /* Current date should be less then the due date && greater than the due date of previous installments */
+                        /* In case of first installment, previous installment date will be current date - 1 */
                         if ($currentDateTimestamp <= $installmentDueDateTimestamp && $currentDateTimestamp > $previousInstallmentDate) {
                             $installment['is_current'] = true;
                         } else {
                             $installment['is_current'] = false;
                         }
                         $previousInstallmentDate = new DateTime($installment['due_date']);
-                        return $installment;
-                    });
+                    }
                 }
-
-                // Unsetting fees_class_type at the end of the loop
-                // unset($fee['fees_class_type']);
             }
 
             ResponseService::successResponse("Fees Fetched Successfully", $fees);
@@ -1302,7 +1406,7 @@ class ParentApiController extends Controller {
             'installment_ids'   => 'nullable|array',
             'installment_ids.*' => 'required|integer',
             'advance'           => 'present|numeric',
-            'payment_method'    => 'required|in:Stripe',
+            'payment_method'    => 'required|in:Stripe,Razorpay,Flutterwave,Paystack',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
@@ -1317,7 +1421,7 @@ class ParentApiController extends Controller {
             }
 
             $parentId = Auth::user()->id;
-//            $studentData = $this->student->findById($request->child_id, ['id', 'user_id', 'class_section_id', 'school_id'], ['class_section']);
+
             $studentData = Auth::user()->guardianRelationChild()->where('id', $request->child_id)->whereHas('user', function ($q) {
                 $q->whereNull('deleted_at');
             })->first();
@@ -1365,9 +1469,6 @@ class ParentApiController extends Controller {
                 $remainingAmount = $fees->total_compulsory_fees;
                 if (count($compulsory_fees) > 0) {
                     $validInstallmentIDS = array_diff($validInstallmentIDS, $compulsory_fees->pluck('installment_id')->toArray());
-//                    if (empty($validInstallmentIDS)) {
-//                        ResponseService::errorResponse('Please Select Only Unpaid Installment');
-//                    }
                     // Removing the Paid installments from total installments so that minimum amount can be calculated for the remaining installments.
                     foreach ($compulsory_fees as $paidInstallment) {
                         if (!empty($paidInstallment->installment_id)) {
@@ -1388,7 +1489,11 @@ class ParentApiController extends Controller {
 
                     // Calculate Due Charges amount if installment is overdue
                     if (new DateTime(date('Y-m-d')) > new DateTime($installment['due_date'])) {
-                        $dueChargesAmount = ($installmentAmount * $installment['due_charges']) / 100;
+                        if ($installment->due_charges_type == "percentage") {
+                            $dueChargesAmount = ($installmentAmount * $installment['due_charges']) / 100;
+                        } else if ($installment->due_charges_type == "fixed") {
+                            $dueChargesAmount = $installment->due_charges;
+                        }
                         $amount += $installmentAmount + $dueChargesAmount;
                     } else {
                         $dueChargesAmount = 0;
@@ -1413,24 +1518,33 @@ class ParentApiController extends Controller {
                 $amount = $fees->total_compulsory_fees;
 
                 if (new DateTime(date('Y-m-d')) > new DateTime($fees->due_date)) {
-                    $dueChargesAmount = ($fees->total_compulsory_fees * $fees->due_charges) / 100;
-                    $amount += $fees->total_compulsory_fees + $dueChargesAmount;
+                    $dueChargesAmount = $fees->due_charges_amount;
+                    $amount += $dueChargesAmount;
                 }
             }
-
-            $finalAmount = $amount + $request->advance;
+            
+            // if advance amount is greater than 0 and less than amount then add advance amount to amount
+            if($request->advance > 0 && $request->advance < $amount) {
+                $finalAmount = $request->advance;
+            } else {
+                $finalAmount = $amount;
+            }
+         
             //Add Payment Data to Payment Transactions Table
             $paymentTransactionData = $this->paymentTransaction->create([
                 'user_id'         => $parentId,
                 'amount'          => $finalAmount,
-                'payment_gateway' => 'Stripe',
+                'payment_gateway' => $request->payment_method,
                 'payment_status'  => 'Pending',
                 'school_id'       => $schoolId,
                 'order_id'        => null
             ]);
-
-
+            
             $paymentIntent = PaymentService::create($request->payment_method, $schoolId)->createPaymentIntent(round($finalAmount, 2), [
+                'user_id'                => Auth::user()->id,
+                'name'                   => Auth::user()->full_name,
+                'email'                  => Auth::user()->email,
+                'mobile'                 => Auth::user()->mobile,
                 'fees_id'                => $request->fees_id,
                 'student_id'             => $studentData->user_id,
                 'parent_id'              => $parentId,
@@ -1443,20 +1557,38 @@ class ParentApiController extends Controller {
                 'school_id'              => $schoolId,
                 'type'                   => 'fees',
                 'fees_type'              => 'compulsory',
-                'is_fully_paid'          => $amount > $fees->total_compulsory_fees
+                'is_fully_paid'          => $amount > $fees->total_compulsory_fees,
             ]);
-            $this->paymentTransaction->update($paymentTransactionData->id, ['order_id' => $paymentIntent->id, 'school_id' => $schoolId]);
 
-            $paymentTransactionData = $this->paymentTransaction->findById($paymentTransactionData->id);
-            // Custom Array to Show as response
-            $paymentGatewayDetails = array(
-                ...$paymentIntent->toArray(),
-                'payment_transaction_id' => $paymentTransactionData->id,
-            );
+            if ($request->payment_method == "Flutterwave" || $request->payment_method == "Paystack") {
+                $this->paymentTransaction->update($paymentTransactionData->id, ['order_id' => $paymentIntent['order_id'] ?? null, 'school_id' => $schoolId]);
+                $paymentTransactionData = $this->paymentTransaction->findById($paymentTransactionData->id);
+                DB::commit();
 
+                \Log::info("Payment Intent:", ['payment_intent' => $paymentIntent]);
+                
+                // Return only the payment_link for Flutterwave
+                if($request->payment_method == "Flutterwave") {
+                    ResponseService::successResponse("", [
+                        "payment_link" => $paymentIntent['payment_link']
+                    ]);
+                } else {
+                    ResponseService::successResponse("", [
+                        "payment_link" => $paymentIntent['data']['authorization_url']
+                    ]);
+                }
+            } else {
+                $this->paymentTransaction->update($paymentTransactionData->id, ['order_id' => $paymentIntent->id, 'school_id' => $schoolId]);
 
-            DB::commit();
-            ResponseService::successResponse("", ["payment_intent" => $paymentGatewayDetails, "payment_transaction" => $paymentTransactionData]);
+                $paymentTransactionData = $this->paymentTransaction->findById($paymentTransactionData->id);
+                // Custom Array to Show as response
+                $paymentGatewayDetails = array(
+                    ...$paymentIntent->toArray(),
+                    'payment_transaction_id' => $paymentTransactionData->id,
+                );
+                DB::commit();
+                ResponseService::successResponse("", ["payment_intent" => $paymentGatewayDetails, "payment_transaction" => $paymentTransactionData]);
+            }
         } catch (Throwable $e) {
             DB::rollBack();
             ResponseService::logErrorResponse($e);
@@ -1470,7 +1602,7 @@ class ParentApiController extends Controller {
             'fees_id'        => 'required',
             'optional_id'    => 'required|array',
             'optional_id.*'  => 'required|integer',
-            'payment_method' => 'required|in:Stripe',
+            'payment_method' => 'required|in:Stripe,Razorpay,Flutterwave,Paystack',
         ]);
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
@@ -1478,7 +1610,6 @@ class ParentApiController extends Controller {
         try {
             DB::beginTransaction();
             $parentId = Auth::user()->id;
-//            $studentData = $this->student->findById($request->child_id, ['id', 'user_id', 'class_section_id', 'school_id'], ['class_section']);
             $studentData = Auth::user()->guardianRelationChild()->where('id', $request->child_id)->whereHas('user', function ($q) {
                 $q->whereNull('deleted_at');
             })->first();
@@ -1532,7 +1663,7 @@ class ParentApiController extends Controller {
             $paymentTransactionData = $this->paymentTransaction->create([
                 'user_id'         => $parentId,
                 'amount'          => $amount,
-                'payment_gateway' => 'Stripe',
+                'payment_gateway' => $request->payment_method,
                 'payment_status'  => 'Pending',
                 'school_id'       => $schoolId,
                 'order_id'        => null
@@ -1550,17 +1681,40 @@ class ParentApiController extends Controller {
                 'optional_fees_id'       => json_encode($optional_fee, JSON_THROW_ON_ERROR),
                 'type'                   => 'fees',
                 'fees_type'              => 'optional',
+                'name'                   => Auth::user()->full_name,
+                'email'                  => Auth::user()->email,
+                'mobile'                 => Auth::user()->mobile
             ]);
-            $this->paymentTransaction->update($paymentTransactionData->id, ['order_id' => $paymentIntent->id, 'school_id' => $schoolId]);
-            $paymentTransactionData = $this->paymentTransaction->findById($paymentTransactionData->id);
-            // Custom Array to Show as response
-            $paymentGatewayDetails = array(
-                ...$paymentIntent->toArray(),
-                'payment_transaction_id' => $paymentTransactionData->id,
-            );
 
-            DB::commit();
-            ResponseService::successResponse("", ["payment_intent" => $paymentGatewayDetails, "payment_transaction" => $paymentTransactionData]);
+            if ($request->payment_method == "Flutterwave" || $request->payment_method == "Paystack") {
+                $this->paymentTransaction->update($paymentTransactionData->id, ['order_id' => $paymentIntent['order_id'] ?? null, 'school_id' => $schoolId]);
+                $paymentTransactionData = $this->paymentTransaction->findById($paymentTransactionData->id);
+                DB::commit();
+
+                \Log::info("Payment Intent:", ['payment_intent' => $paymentIntent]);
+                
+                // Return only the payment_link for Flutterwave
+                if($request->payment_method == "Flutterwave") {
+                    ResponseService::successResponse("", [
+                        "payment_link" => $paymentIntent['payment_link']
+                    ]);
+                } else {
+                    ResponseService::successResponse("", [
+                        "payment_link" => $paymentIntent['data']['authorization_url']
+                    ]);
+                }
+            } else {
+                $this->paymentTransaction->update($paymentTransactionData->id, ['order_id' => $paymentIntent->id, 'school_id' => $schoolId]);
+
+                $paymentTransactionData = $this->paymentTransaction->findById($paymentTransactionData->id);
+                // Custom Array to Show as response
+                $paymentGatewayDetails = array(
+                    ...$paymentIntent->toArray(),
+                    'payment_transaction_id' => $paymentTransactionData->id,
+                );
+                DB::commit();
+                ResponseService::successResponse("", ["payment_intent" => $paymentGatewayDetails, "payment_transaction" => $paymentTransactionData]);
+            }
         } catch (Throwable $e) {
             DB::rollBack();
             ResponseService::logErrorResponse($e);
@@ -1579,10 +1733,9 @@ class ParentApiController extends Controller {
         }
 
         try {
-//            $student = $this->student->findById($request->child_id, ['*'], ['user:id,first_name,last_name']);
             $student = Auth::user()->guardianRelationChild()->where('id', $request->child_id)->whereHas('user', function ($q) {
                 $q->whereNull('deleted_at');
-            })->first();
+            })->with('user:id,first_name,last_name', 'class_section.class.stream', 'class_section.section', 'class_section.medium')->first();
 
             if (empty($student)) {
                 ResponseService::errorResponse("Child's Account is not Active.Contact School Support", NULL, config('constants.RESPONSE_CODE.INACTIVE_CHILD'));
@@ -1599,12 +1752,11 @@ class ParentApiController extends Controller {
                         }]);
                     },
                 ])->first();
-
-            $systemLogo = $this->cache->getSchoolSettings('vertical_logo');
+            $systemVerticalLogo = $this->systemSetting->builder()->where('name', 'vertical_logo')->first();
+            $schoolVerticalLogo = $this->schoolSetting->builder()->where('name', 'vertical_logo')->first();
             $school = $this->cache->getSchoolSettings();
-//            return view('fees.fees_receipt', compact('systemLogo', 'school', 'feesPaid', 'student'));
-            $output = Pdf::loadView('fees.fees_receipt', compact('systemLogo', 'school', 'feesPaid', 'student'))->output();
-
+//            return view('fees.fees_receipt', compact('systemVerticalLogo', 'school', 'feesPaid', 'student', 'schoolVerticalLogo'));
+            $output = Pdf::loadView('fees.fees_receipt', compact('systemVerticalLogo', 'school', 'feesPaid', 'student', 'schoolVerticalLogo'))->output();
             $response = array(
                 'error' => false,
                 'pdf'   => base64_encode($output),
@@ -1670,6 +1822,14 @@ class ParentApiController extends Controller {
             ResponseService::logErrorResponse($e);
             ResponseService::errorResponse();
         }
+    }
+
+    public function test(Request $request)
+    {
+        // return $request->header();
+        // DB::setDefaultConnection('school');
+        // return DB::getDatabaseName();
+        return Auth::user();
     }
 
 
@@ -1740,5 +1900,4 @@ class ParentApiController extends Controller {
     //             'code' => 103,
     //         );
     //     }
-    // }
 }

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use JsonException;
 use Throwable;
 
@@ -18,11 +20,13 @@ class UserService {
     private UserInterface $user;
     private StudentInterface $student;
     private ExtraFormFieldsInterface $extraFormFields;
-
-    public function __construct(UserInterface $user, StudentInterface $student, ExtraFormFieldsInterface $extraFormFields) {
+    private SessionYearsTrackingsService $sessionYearsTrackingsService;
+    
+    public function __construct(UserInterface $user, StudentInterface $student, ExtraFormFieldsInterface $extraFormFields, SessionYearsTrackingsService $sessionYearsTrackingsService) {
         $this->user = $user;
         $this->student = $student;
         $this->extraFormFields = $extraFormFields;
+        $this->sessionYearsTrackingsService = $sessionYearsTrackingsService;
     }
 
     /**
@@ -50,7 +54,7 @@ class UserService {
      * @param null $image
      * @return Model|null
      */
-    public function createOrUpdateParent($first_name, $last_name, $email, $mobile, $gender, $image = null) {
+    public function createOrUpdateParent($first_name, $last_name, $email, $mobile, $gender, $image = null, $reset_password = null) {
         $password = $this->makeParentPassword($mobile);
 
         $parent = array(
@@ -58,7 +62,7 @@ class UserService {
             'last_name'  => $last_name,
             'mobile'     => $mobile,
             'gender'     => $gender,
-            'school_id'  => null
+            'school_id'  => Auth::user()->school_id
         );
 
         //NOTE : This line will return the old values if the user is already exists
@@ -67,9 +71,16 @@ class UserService {
             $parent['image'] = UploadService::upload($image, 'guardian');
         }
         if (!empty($user)) {
-            if ($user->image) {
-                UploadService::delete($user->getRawOriginal('image'));
+            if (isset($parent['image'])) {
+                if ($user->getRawOriginal('image') && Storage::disk('public')->exists($user->getRawOriginal('image'))) {
+                    Storage::disk('public')->delete($user->getRawOriginal('image'));
+                }
             }
+            if ($reset_password) {
+                $parent['password'] = Hash::make($password);
+            }
+            $user->assignRole('Guardian');
+            
             $user->update($parent);
         } else {
             $parent['password'] = Hash::make($password);
@@ -102,7 +113,7 @@ class UserService {
      * @throws Throwable
      */
 
-    public function createStudentUser(string $first_name, string $last_name, string $admission_no, string|null $mobile, string $dob, string $gender, \Symfony\Component\HttpFoundation\File\UploadedFile|null $image, int $classSectionID, string $admissionDate, $current_address = null, $permanent_address = null, int $sessionYearID, int $guardianID, array $extraFields = [], int $status) {
+    public function createStudentUser(string $first_name, string $last_name, string $admission_no, string|null $mobile, string $dob, string $gender, \Symfony\Component\HttpFoundation\File\UploadedFile|null $image, int $classSectionID, string $admissionDate, $current_address = null, $permanent_address = null, int $sessionYearID, int $guardianID, array $extraFields = [], int $status, $is_send_notification = null) {
         $password = $this->makeStudentPassword($dob);
         //Create Student User First
         $user = $this->user->create([
@@ -126,15 +137,20 @@ class UserService {
         $roll_number_db = $roll_number_db['max(roll_number)'];
         $roll_number = $roll_number_db + 1;
 
-        $student = $this->student->create([
+        $student = $this->student->updateOrCreate( ['user_id' => $user->id] ,[
             'user_id'          => $user->id,
             'class_section_id' => $classSectionID,
             'admission_no'     => $admission_no,
             'roll_number'      => $roll_number,
             'admission_date'   => date('Y-m-d', strtotime($admissionDate)),
             'guardian_id'      => $guardianID,
-            'session_year_id'  => $sessionYearID
+            'session_year_id'  => $sessionYearID,
+            'join_session_year_id' => $sessionYearID,
+            'leave_session_year_id' => null 
         ]);
+
+        // Store Session Years Tracking
+        $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\Student', $student->id, $user->id, $sessionYearID, Auth::user()->school_id, null);
 
         // Store Extra Details
         $extraDetails = array();
@@ -144,7 +160,7 @@ class UserService {
                 $data = (is_array($fields['data']) ? json_encode($fields['data'], JSON_THROW_ON_ERROR) : $fields['data']);
             }
             $extraDetails[] = array(
-                'student_id'    => $student->user_id,
+                'user_id'    => $student->user_id,
                 'form_field_id' => $fields['form_field_id'],
                 'data'          => $data,
             );
@@ -154,8 +170,14 @@ class UserService {
         }
 
         $guardian = $this->user->guardian()->where('id', $guardianID)->firstOrFail();
+        if (is_object($guardian)) {
+            $guardian = (object) $guardian->toArray();
+        }
+
         $parentPassword = $this->makeParentPassword($guardian->mobile);
-        $this->sendRegistrationEmail($guardian->email, $guardian->full_name, $parentPassword, $user->full_name, $student->admission_no, $password);
+        if ($is_send_notification) {
+            $this->sendRegistrationEmail($guardian, $user, $student->admission_no, $password);
+        }
         return $user;
     }
 
@@ -175,7 +197,7 @@ class UserService {
      * @return Model|null
      * @throws JsonException
      */
-    public function updateStudentUser($userID, $first_name, $last_name, $mobile, $dob, $gender, $image, $sessionYearID, array $extraFields = [], $guardianID = null, $current_address = null, $permanent_address = null) {
+    public function updateStudentUser($userID, $first_name, $last_name, $mobile, $dob, $gender, $image, $sessionYearID, array $extraFields = [], $guardianID = null, $current_address = null, $permanent_address = null, $reset_password = null, $classSectionID) {
         $studentUserData = array(
             'first_name'        => $first_name,
             'last_name'         => $last_name,
@@ -194,6 +216,10 @@ class UserService {
             $studentUserData['permanent_address'] = $permanent_address;
         }
 
+        if (isset($reset_password)) {
+            $studentUserData['password'] = Hash::make($this->makeStudentPassword($dob));
+        }
+
 
         if ($image) {
             $studentUserData['image'] = $image;
@@ -203,7 +229,8 @@ class UserService {
 
         $studentData = array(
             'guardian_id'     => $guardianID,
-            'session_year_id' => $sessionYearID
+            'session_year_id' => $sessionYearID,
+            'class_section_id' => $classSectionID
         );
 
         $student = $this->student->update($user->student->id, $studentData);
@@ -213,7 +240,7 @@ class UserService {
                 if (isset($fields['data']) && $fields['data'] instanceof UploadedFile) {
                     $extraDetails[] = array(
                         'id'            => $fields['id'],
-                        'student_id'    => $student->user_id,
+                        'user_id'    => $student->user_id,
                         'form_field_id' => $fields['form_field_id'],
                         'data'          => $fields['data']
                     );
@@ -225,13 +252,14 @@ class UserService {
                 }
                 $extraDetails[] = array(
                     'id'            => $fields['id'],
-                    'student_id'    => $student->user_id,
+                    'user_id'    => $student->user_id,
                     'form_field_id' => $fields['form_field_id'],
                     'data'          => $data,
                 );
             }
         }
         $this->extraFormFields->upsert($extraDetails, ['id'], ['data']);
+        $user->assignRole('Student');
         DB::commit();
         return $user;
     }
@@ -246,28 +274,178 @@ class UserService {
      * @return void
      * @throws Throwable
      */
-    public function sendRegistrationEmail($email, $name, $plainTextPassword, $childName, $childAdmissionNumber, $childPlainTextPassword) {
+    public function sendRegistrationEmail($guardian, $child, $childAdmissionNumber, $childPlainTextPassword) {
         try {
+
+         
             $school_name = Auth::user()->school->name;
+
+            $email_body = $this->replacePlaceholders($guardian, $child, $childAdmissionNumber, $childPlainTextPassword);
             $data = [
-                'subject'                => 'Welcome to ' . $school_name,
-                'email'                  => $email,
-                'name'                   => $name,
-                'username'               => $email,
-                'password'               => $plainTextPassword,
-                'child_name'             => $childName,
-                'child_admission_number' => $childAdmissionNumber,
-                'child_password'         => $childPlainTextPassword,
+                'subject'                => 'Admission Application Approved - Welcome to ' . $school_name,
+                'email'                  => $guardian->email,
+                'email_body'             => $email_body
             ];
 
             Mail::send('students.email', $data, static function ($message) use ($data) {
                 $message->to($data['email'])->subject($data['subject']);
             });
         } catch (\Throwable $th) {
-
+            if (Str::contains($th->getMessage(), ['Failed', 'Mail', 'Mailer', 'MailManager'])) {
+                ResponseService::warningResponse("Message send successfully. But Email not sent.");
+            } else {
+                ResponseService::errorResponse(trans('error_occured'));
+            }
         }
 
     }
+
+    private function replacePlaceholders($guardian, $child, $childAdmissionNumber, $childPlainTextPassword)
+    {
+
+        $cache = app(CachingService::class);
+        $schoolSettings = $cache->getSchoolSettings();
+        $systemSettings = $cache->getSystemSettings();
+
+        $templateContent = $schoolSettings['email-template-parent'] ?? '';
+        // Define the placeholders and their replacements
+        $placeholders = [
+            '{parent_name}' => $guardian->full_name,
+            '{code}' => Auth::user()->school->code,
+            '{email}' => $guardian->email,
+            '{password}' => $guardian->mobile,
+            '{school_name}' => $schoolSettings['school_name'],
+
+            '{child_name}' => $child->full_name,
+            '{grno}' => $child->email,
+            '{child_password}' => $childPlainTextPassword,
+            '{admission_no}' => $childAdmissionNumber,
+
+            '{support_email}' => $schoolSettings['school_email'] ?? '',
+            '{support_contact}' => $schoolSettings['school_phone'] ?? '',
+
+            '{android_app}' => $systemSettings['app_link'] ?? '',
+            '{ios_app}' => $systemSettings['ios_app_link'] ?? '',
+
+            // Add more placeholders as needed
+        ];
+
+        // Replace the placeholders in the template content
+        foreach ($placeholders as $placeholder => $replacement) {
+            $templateContent = str_replace($placeholder, $replacement, $templateContent);
+        }
+
+        return $templateContent;
+    }
+
+    public function sendStaffRegistrationEmail($user, $password)
+    {
+        try {
+            $cache = app(CachingService::class);
+            $schoolSettings = $cache->getSchoolSettings();
+            $email_body = $this->replaceStaffPlaceholders($user, $password, $schoolSettings);
+            $data = [
+                'subject'     => 'Welcome to ' . $schoolSettings['school_name'],
+                'email'       => $user->email,
+                'email_body'  => $email_body
+            ];
+
+            Mail::send('teacher.email', $data, static function ($message) use ($data) {
+                $message->to($data['email'])->subject($data['subject']);
+            });
+        } catch (\Throwable $th) {
+            if (Str::contains($th->getMessage(), ['Failed', 'Mail', 'Mailer', 'MailManager'])) {
+                ResponseService::warningResponse("Message send successfully. But Email not sent.");
+            } else {
+                ResponseService::errorResponse(trans('error_occured'));
+            }
+        }
+    }
+
+    private function replaceStaffPlaceholders($user, $password, $schoolSettings)
+    {
+
+        $cache = app(CachingService::class);
+        $systemSettings = $cache->getSystemSettings();
+
+        $templateContent = $schoolSettings['email-template-staff'] ?? '';
+        // Define the placeholders and their replacements
+        $placeholders = [
+            '{full_name}' => $user->full_name,
+            '{code}' => Auth::user()->school->code,
+            '{email}' => $user->email,
+            '{password}' => $password,
+            '{school_name}' => $schoolSettings['school_name'],
+            
+            '{support_email}' => $schoolSettings['school_email'] ?? '',
+            '{support_contact}' => $schoolSettings['school_phone'] ?? '',
+
+            '{url}' => url('/'),
+
+            '{android_app}' => $systemSettings['app_link'] ?? '',
+            '{ios_app}' => $systemSettings['ios_app_link'] ?? '',
+
+            // Add more placeholders as needed
+        ];
+
+        // Replace the placeholders in the template content
+        foreach ($placeholders as $placeholder => $replacement) {
+            $templateContent = str_replace($placeholder, $replacement, $templateContent);
+        }
+
+        return $templateContent;
+    }
+
+    public function sendApplicationRejectEmail($user, $class_name, $guardian)
+    {
+        try {
+            $cache = app(CachingService::class);
+            $schoolSettings = $cache->getSchoolSettings();
+            $email_body = $this->replaceApplicationRejectPlaceholders($user, $class_name, $schoolSettings, $guardian);
+            $data = [
+                'subject'     => 'Admission Application Rejected - ' . $schoolSettings['school_name'],
+                'email'       => $guardian->email,
+                'email_body'  => $email_body
+            ];
+
+            Mail::send('students.email', $data, static function ($message) use ($data) {
+                $message->to($data['email'])->subject($data['subject']);
+            });
+        } catch (\Throwable $th) {
+            if (Str::contains($th->getMessage(), ['Failed', 'Mail', 'Mailer', 'MailManager'])) {
+                ResponseService::warningResponse("Message send successfully. But Email not sent.");
+            } else {
+                ResponseService::errorResponse(trans('error_occured'));
+            }
+        }
+    }
+
+    private function replaceApplicationRejectPlaceholders($user, $class_name, $schoolSettings, $guardian)
+    {
+        $cache = app(CachingService::class);
+        $systemSettings = $cache->getSystemSettings();
+
+        $templateContent = $schoolSettings['email-template-application-reject'] ?? '';
+        // Define the placeholders and their replacements
+        $placeholders = [
+            '{parent_name}' => $guardian->full_name,
+            '{child_name}' => $user->full_name,
+            '{school_name}' => $schoolSettings['school_name'],
+            '{support_email}' => $schoolSettings['school_email'] ?? '',
+            '{support_contact}' => $schoolSettings['school_phone'] ?? '',
+            '{class}' => $class_name
+            // Add more placeholders as needed
+        ];
+
+        // Replace the placeholders in the template content
+        foreach ($placeholders as $placeholder => $replacement) {
+            $templateContent = str_replace($placeholder, $replacement, $templateContent);
+        }
+
+        return $templateContent;
+    }
+
+
 
     /* Backup Code for Student CreateOrUpdate
     public function createOrUpdateStudentUser($first_name, $last_name, $admission_no, $mobile, $dob, $gender, $image, $classSectionID, $admissionDate, array $extraFields = [], $rollNumber = null, $guardianID = null) {

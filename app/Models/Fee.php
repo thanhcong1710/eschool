@@ -2,12 +2,10 @@
 
 namespace App\Models;
 
-use App\Models\Students;
-use App\Models\OptionalFee;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Auth;
 
 class Fee extends Model {
     use HasFactory;
@@ -17,6 +15,7 @@ class Fee extends Model {
         'name',
         'due_date',
         'due_charges',
+        'due_charges_amount',
         'include_fee_installments',
         'class_id',
         'school_id',
@@ -24,7 +23,7 @@ class Fee extends Model {
         'created_at',
         'updated_at'
     ];
-    protected $appends = ['include_fee_installments','total_compulsory_fees','total_optional_fees','compulsory_fees','optional_fees'];
+    protected $appends = ['include_fee_installments', 'total_compulsory_fees', 'total_optional_fees', 'compulsory_fees', 'optional_fees'];
 
     //'compulsory_fees','optional_fees',
 
@@ -79,8 +78,8 @@ class Fee extends Model {
 
     public function getTotalCompulsoryFeesAttribute() {
         if ($this->relationLoaded('fees_class_type')) {
-            $compulsoryFees = $this->fees_class_type->filter(function($data){
-                return $data->optional==0;
+            $compulsoryFees = $this->fees_class_type->filter(function ($data) {
+                return $data->optional == 0;
             });
             return $compulsoryFees->sum('amount');
         }
@@ -89,8 +88,8 @@ class Fee extends Model {
 
     public function getTotalOptionalFeesAttribute() {
         if ($this->relationLoaded('fees_class_type')) {
-            $optionalFees = $this->fees_class_type->filter(function($data){
-                return $data->optional==1;
+            $optionalFees = $this->fees_class_type->filter(function ($data) {
+                return $data->optional == 1;
             });
             return $optionalFees->sum('amount');
         }
@@ -100,8 +99,8 @@ class Fee extends Model {
 
     public function getCompulsoryFeesAttribute() {
         if ($this->relationLoaded('fees_class_type')) {
-            $compulsoryFees = $this->fees_class_type->filter(function($data){
-                return $data->optional==0;
+            $compulsoryFees = $this->fees_class_type->filter(function ($data) {
+                return $data->optional == 0;
             });
             // Reset the keys
             $compulsoryFees = $compulsoryFees->values();
@@ -113,8 +112,8 @@ class Fee extends Model {
 
     public function getOptionalFeesAttribute() {
         if ($this->relationLoaded('fees_class_type')) {
-            $optionalFees = $this->fees_class_type->filter(function($data){
-                return $data->optional==1;
+            $optionalFees = $this->fees_class_type->filter(function ($data) {
+                return $data->optional == 1;
             });
             // Reset the keys
             $optionalFees = $optionalFees->values();
@@ -134,7 +133,7 @@ class Fee extends Model {
     }
 
     public function scopeOwner($query) {
-        if(Auth::check()){
+        if (Auth::check()) {
             if (Auth::user()->hasRole('Super Admin')) {
                 return $query;
             }
@@ -146,8 +145,17 @@ class Fee extends Model {
             if (Auth::user()->hasRole('Student')) {
                 return $query->where('school_id', Auth::user()->school_id);
             }
+
+            if (Auth::user()->school_id) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;
+    }
+
+    public function session_years_trackings()
+    {
+        return $this->hasMany(SessionYearsTracking::class, 'modal_id', 'id')->where('modal_type', 'App\Models\Fee');
     }
 }

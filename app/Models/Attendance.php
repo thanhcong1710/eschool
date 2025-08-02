@@ -22,6 +22,8 @@ class Attendance extends Model
         'school_id'
     ];
 
+    protected $appends = ['roll_number'];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'student_id')->withTrashed();
@@ -29,18 +31,29 @@ class Attendance extends Model
 
     public function scopeOwner($query)
     {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
+        if(Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
 
-        if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
+            if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
 
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
-
         return $query;
+    }
+
+    public function getRollNumberAttribute()
+    {   
+        if ($this->user) {
+            if ($this->user->student) {
+                return $this->user->student->roll_number;        
+            }
+        }
+        return '';
     }
 }

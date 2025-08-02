@@ -4,7 +4,6 @@ $.validator.addMethod("noDuplicateValues", function (value, element, options) {
     if (typeof options.class != "undefined" && options.class != null) {
         let components = (typeof options.group != "undefined" && options.group != "") ? $("." + options.class + "[data-group='" + options.group + "']") : $("." + options.class);
         // let components;
-        // console.log(options.group);
         // if (typeof options.group != "undefined" && options.group != "") {
         //     components = $("." + options.class + "[data-group='" + options.group + "']");
         // } else {
@@ -17,14 +16,12 @@ $.validator.addMethod("noDuplicateValues", function (value, element, options) {
                 arrayValues.push($(value).val());
             }
             // if ($(element).attr('name') == "core_subject[0][id]") {
-            //     // console.log(arrayValues, value);
-            //     console.log("loop", value);
+            
             // }
         })
 
         // if ($(element).attr('name') == "core_subject[0][id]") {
-        // console.log($(element).attr('name'));
-        // console.log(arrayValues, value, options.group);
+        
         // }
         return !arrayValues.includes(value);
     }
@@ -32,7 +29,7 @@ $.validator.addMethod("noDuplicateValues", function (value, element, options) {
 }, "Duplicate values are not allowed");
 
 // $.validator.addMethod("warningDuplicateValues", function (value, element, options) {
-//     console.log($(element).parent().find('.'+options.dateClass));
+
 //     // Current Date to UTC Format
 //     let currentDate  = moment.utc($(element).parent().parent().find('.'+options.dateClass).val(),'DD-MM-YYYY').valueOf();
 
@@ -96,6 +93,7 @@ $.validator.addMethod("timeGreaterThan", function (value, element, params) {
 function errorPlacement(label, element) {
     label.addClass('mt-2 text-danger');
     if (label.text()) {
+        closeLoading();
         if (element.is(":radio") || element.is(":checkbox")) {
             label.insertAfter(element.parent().parent().parent());
         } else if (element.is(":file")) {
@@ -103,16 +101,17 @@ function errorPlacement(label, element) {
         } else if (element.hasClass('color-picker')) {
             label.insertAfter(element.parent());
         } else if(element.hasClass('select2-dropdown')) {
-            // element.next().css('border','1px solid #fe7c96');
             label.insertAfter(element.next());
+        } else if(element.hasClass('school_code_prefix')) {
+            label.insertAfter(element.next().next());
         } else {
             label.insertAfter(element);
-            
         }
     }
 }
 
 function highlight(element) {
+    closeLoading();
     if ($(element).hasClass('color-picker')) {
         $(element).parent().parent().addClass('has-danger')
     } else {
@@ -507,8 +506,8 @@ $(".add-assignment-form").validate({
 
 $(".edit-assignment-form").validate({
     rules: {
-        'class_section_id': "required",
-        'subject_id': "required",
+        'class_section_id[]': "required",
+        'class_subject_id': "required",
         'name': "required",
         'due_date': "required",
         'extra_days_for_resubmission': "required",
@@ -601,7 +600,7 @@ $(".school-registration-validate").validate({
 $(".change-school-admin").validate({
     rules: {
         edit_admin_image: {
-            extension: "jpg|jpeg|png"
+            extension: "jpg|jpeg|png|svg"
         },
     },
     messages: {
@@ -623,7 +622,7 @@ $(".change-school-admin").validate({
 $(".create-staff-form").validate({
     rules: {
         image: {
-            extension: "jpg|jpeg|png"
+            extension: "jpg|jpeg|png|svg"
         },
     },
     messages: {
@@ -645,7 +644,7 @@ $(".create-staff-form").validate({
 $(".edit-staff-form").validate({
     rules: {
         image: {
-            extension: "jpg|jpeg|png"
+            extension: "jpg|jpeg|png|svg"
         },
     },
     messages: {
@@ -667,7 +666,7 @@ $(".edit-staff-form").validate({
 $('.profile-update-form').validate({
     rules: {
         image: {
-            extension: "jpg|jpeg|png"
+            extension: "jpg|jpeg|png|svg"
         },
     },
     messages: {
@@ -705,3 +704,54 @@ defaultValidationClasses.forEach(function (value, index) {
     });
 
 })
+
+$(".online-registration-form").validate({
+    rules: {
+        'first_name': "required",
+        'last_name': "required",
+        'mobile': "number",
+        'dob': "required",
+        'class_section_id': "nullable",
+        'admission_no': "required",
+        'admission_date': "required",
+        'guardian_email': {
+            "required": true,
+            "email": true,
+        },
+        'guardian_first_name': "required",
+        'guardian_last_name': "required",
+        'guardian_mobile': {
+            "number": true,
+            "required": true,
+        },
+
+    },
+    success: function (label, element) {
+        success(element);
+    },
+    errorPlacement: function (label, element) {
+        errorPlacement(label, element);
+    },
+    highlight: function (element, errorClass) {
+        highlight(element, errorClass);
+    }
+});
+
+$(".restore-form").validate({
+    rules: {
+        zip: {
+            required: true,
+            extension: "zip"
+        },
+    },
+
+    success: function (label, element) {
+        success(element);
+    },
+    errorPlacement: function (label, element) {
+        errorPlacement(label, element);
+    },
+    highlight: function (element, errorClass) {
+        highlight(element, errorClass);
+    }
+});

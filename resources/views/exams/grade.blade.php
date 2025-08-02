@@ -69,7 +69,7 @@
                                         </button>
                                     </div>
                                 </div>
-                                <input type="submit" class="btn btn-theme" value={{ __('submit') }} />
+                                <input type="submit" class="btn btn-theme float-right" value={{ __('submit') }} />
                             </form>
                         </div>
                     </div>

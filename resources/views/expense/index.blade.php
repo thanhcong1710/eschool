@@ -56,7 +56,8 @@
                                 </div>
 
                             </div>
-                            <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -70,7 +71,7 @@
 
                             <div class="form-group col-sm-12 col-md-4">
                                 <label class="filter-menu">{{ __('session_year') }}</label>
-                                {!! Form::select('session_year_id', $sessionYear, $current_session_year, ['class' => 'form-control', 'id' => 'filter_session_year_id']) !!}
+                                {!! Form::select('session_year_id', $sessionYear, $current_session_year->id, ['class' => 'form-control', 'id' => 'filter_session_year_id']) !!}
                             </div>
 
                             <div class="form-group col-sm-12 col-md-4">
@@ -89,7 +90,7 @@
                                data-url="{{ route('expense.show',[1]) }}" data-click-to-select="true"
                                data-side-pagination="server" data-pagination="true"
                                data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true" data-show-columns="true"
-                               data-show-refresh="true" data-fixed-columns="true" data-fixed-number="2"
+                               data-show-refresh="true" data-fixed-columns="false" data-fixed-number="2"
                                data-fixed-right-number="1" data-trim-on-search="false" data-mobile-responsive="true"
                                data-sort-name="date" data-sort-order="desc" data-maintain-selected="true"
                                data-export-data-type='all' data-query-params="ExpenseQueryParams"
@@ -103,7 +104,7 @@
                                 <th scope="col" data-field="title" data-sortable="false">{{ __('title') }}</th>
                                 <th scope="col" data-field="category.name" data-sortable="false">{{ __('category') }}</th>
                                 <th scope="col" data-field="description" data-sortable="false">{{ __('description') }}</th>
-                                <th scope="col" data-field="date" data-sortable="false" data-footer-formatter="totalFormatter">{{ __('date') }}</th>
+                                <th scope="col" data-field="date" data-formatter="dateFormatter" data-sortable="false" data-footer-formatter="totalFormatter">{{ __('date') }}</th>
                                 <th scope="col" data-field="amount" data-sortable="false" data-formatter="amountFormatter" data-footer-formatter="totalAmountFormatter">{{ __('Amount') }}</th>
                                 <th scope="col" data-field="operate" data-events="expenseEvents" data-escape="false">{{ __('action') }}</th>
                             </tr>

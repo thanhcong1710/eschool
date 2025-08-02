@@ -2,11 +2,13 @@
 
 namespace App\Repositories\Base;
 
+use App\Repositories\User\UserInterface;
 use App\Services\UploadService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
+use Storage;
 
 class BaseRepository implements BaseInterface {
     /**
@@ -224,5 +226,26 @@ class BaseRepository implements BaseInterface {
      */
     public function model(): Model {
         return new $this->model();
+    }
+
+    public function upsertProfile(array $payloads, array $uniqueColumns, array $updatingColumn): bool
+    {
+        $existingRecords = $this->defaultModel()->whereIn($uniqueColumns[0], array_column($payloads, $uniqueColumns[0]))->get();
+
+        foreach ($existingRecords as $key => $row) {
+            if ($row->image && $row->getRawOriginal('image')) {
+                if (Storage::disk('public')->exists($row->getRawOriginal('image'))) {
+                    Storage::disk('public')->delete($row->getRawOriginal('image'));
+                }
+            }
+        }
+        foreach ($payloads as $key => $payload) {
+            foreach ($payload as $column => $value) {
+                if ($value instanceof UploadedFile) {
+                    $payloads[$key][$column] = UploadService::upload($value, $this->uploadFolder);
+                }
+            }
+        }
+        return $this->defaultModel()->upsert($payloads, $uniqueColumns, $updatingColumn);
     }
 }

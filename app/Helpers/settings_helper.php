@@ -57,10 +57,10 @@ function getDateFormat() {
     $dateFormat['d-m-Y'] = 'd-m-Y - ' . date('d-m-Y');
     $dateFormat['Y-m-d'] = 'Y-m-d - ' . date('Y-m-d');
     $dateFormat['Y-d-m'] = 'Y-d-m - ' . date('Y-d-m');
-    $dateFormat['F j, Y'] = 'F j, Y - ' . date('F j, Y');
-    $dateFormat['jS F Y'] = 'jS F Y - ' . date('jS F Y');
-    $dateFormat['l jS F'] = 'l jS F - ' . date('l jS F');
-    $dateFormat['d M, y'] = 'd M, y - ' . date('d M, y');
+    // $dateFormat['F j, Y'] = 'F j, Y - ' . date('F j, Y');
+    // $dateFormat['jS F Y'] = 'jS F Y - ' . date('jS F Y');
+    // $dateFormat['l jS F'] = 'l jS F - ' . date('l jS F');
+    // $dateFormat['d M, y'] = 'd M, y - ' . date('d M, y');
     return $dateFormat;
 }
 
@@ -204,4 +204,18 @@ function sessionYearWiseMonth()
         $months[$index] = $monthArray[$index];
     }
     return $months;
+}
+
+function format_date($date)
+{
+    if (Auth::user()) {
+        if (Auth::user()->school_id) {
+            $setting = app(CachingService::class)->getSchoolSettings();
+            return date($setting['date_format'] ?? 'Y-m-d',strtotime($date));
+        } else {
+            $setting = app(CachingService::class)->getSystemSettings();
+            return date($setting['date_format'] ?? 'Y-m-d',strtotime($date));
+        }
+    }
+    return $date;
 }

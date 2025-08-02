@@ -23,6 +23,7 @@ class Subject extends Model {
         'school_id'
     ];
     protected $appends = ['name_with_type'];
+    protected $hidden = ['created_at','updated_at'];
 
     public function medium() {
         return $this->belongsTo(Mediums::class)->withTrashed();
@@ -44,18 +45,20 @@ class Subject extends Model {
 
     public function scopeOwner($query) {
 
-        if (Auth::user()->school_id) {
-            if (Auth::user()->hasRole('School Admin')) {
+        if (Auth::user()) {
+            if (Auth::user()->school_id) {
+                if (Auth::user()->hasRole('School Admin')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
+                if (Auth::user()->hasRole('Teacher')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
+        
+                if (Auth::user()->hasRole('Student')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
                 return $query->where('school_id', Auth::user()->school_id);
             }
-            if (Auth::user()->hasRole('Teacher')) {
-                return $query->where('school_id', Auth::user()->school_id);
-            }
-    
-            if (Auth::user()->hasRole('Student')) {
-                return $query->where('school_id', Auth::user()->school_id);
-            }
-            return $query->where('school_id', Auth::user()->school_id);
         }
 
         return $query;
@@ -74,7 +77,7 @@ class Subject extends Model {
         }
 
         if (!empty($this->type)) {
-            $name .= ' - ' . $this->type;
+            $name .= ' - ' . trans($this->type);
         }
 
         return $name;

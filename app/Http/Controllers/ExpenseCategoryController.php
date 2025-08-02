@@ -5,18 +5,25 @@ namespace App\Http\Controllers;
 use App\Repositories\ExpenseCategory\ExpenseCategoryInterface;
 use App\Services\BootstrapTableService;
 use App\Services\ResponseService;
+use App\Services\CachingService;
+use App\Services\SessionYearsTrackingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class ExpenseCategoryController extends Controller
 {
 
     private ExpenseCategoryInterface $expenseCategory;
+    private SessionYearsTrackingsService $sessionYearsTrackingsService;
+    private CachingService $cache;
 
-    public function __construct(ExpenseCategoryInterface $expenseCategory)
+    public function __construct(ExpenseCategoryInterface $expenseCategory, SessionYearsTrackingsService $sessionYearsTrackingsService, CachingService $cache)
     {
         $this->expenseCategory = $expenseCategory;
+        $this->sessionYearsTrackingsService = $sessionYearsTrackingsService;
+        $this->cache = $cache;
     }
 
     public function index()
@@ -48,7 +55,11 @@ class ExpenseCategoryController extends Controller
                 'name' => $request->name,
                 'description' => $request->description
             ];
-            $this->expenseCategory->create($data);
+            $expenseCategory = $this->expenseCategory->create($data);
+
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\ExpenseCategory', $expenseCategory->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+
             DB::commit();
             ResponseService::successResponse('Data Stored Successfully');
         } catch (Throwable $e) {
@@ -148,6 +159,8 @@ class ExpenseCategoryController extends Controller
         try {
             DB::beginTransaction();
             $this->expenseCategory->deleteById($id);
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\ExpenseCategory', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
             DB::commit();
             ResponseService::successResponse('Data Deleted Successfully');
         } catch (Throwable $e) {

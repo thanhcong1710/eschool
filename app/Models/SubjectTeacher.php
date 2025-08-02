@@ -17,6 +17,7 @@ class SubjectTeacher extends Model {
         'school_id',
     ];
     protected $appends = ['subject_with_name'];
+    protected $hidden = ['created_at','updated_at'];
 
     public function class_section() {
         return $this->belongsTo(ClassSection::class)->with('class', 'section', 'medium')->withTrashed();
@@ -24,6 +25,14 @@ class SubjectTeacher extends Model {
 
     public function subject() {
         return $this->belongsTo(Subject::class)->withTrashed();
+    }
+
+    // public function class_subject() {
+    //     return $this->belongsTo(Subject::class);
+    // }
+
+    public function class_subject() {
+        return $this->belongsTo(ClassSubject::class);
     }
 
     public function teacher() {
@@ -35,25 +44,25 @@ class SubjectTeacher extends Model {
     }
 
     public function scopeOwner($query) {
-        if (Auth::user()->hasRole('School Admin')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
+        if (Auth::user()) {
 
-        if (Auth::user()->hasRole('Teacher')) {
-            $cache = app(CachingService::class);
-            $currentSemester = $cache->getDefaultSemesterData();
-            $class_subject_ids = ClassSubject::where(['school_id' => Auth::user()->school_id])->where(function($query) use($currentSemester){
-                (!empty($currentSemester)) ? $query->where('semester_id', $currentSemester->id)->orWhereNull('semester_id') : $query->orWhereNull('semester_id');
-            })->pluck('id');
-            /*Shakir sir's code*/
-//            $teacher_class_subjects = SubjectTeacher::where(['teacher_id' => Auth::user()->id, 'school_id' => Auth::user()->school_id])->whereIn('class_subject_id',$class_subject_ids)->pluck('class_subject_id');
-//            return $query->whereIn('class_subject_id',$teacher_class_subjects)->where('school_id', Auth::user()->school_id);
-
-            /*Sagar Sir's Code*/
-            return $query->whereIn('class_subject_id', $class_subject_ids)->where(['teacher_id' => Auth::user()->id, 'school_id' => Auth::user()->school_id]);
-        }
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+            if (Auth::user()->hasRole('School Admin')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Teacher')) {
+                $cache = app(CachingService::class);
+                $currentSemester = $cache->getDefaultSemesterData();
+    
+                $class_subject_ids = ClassSubject::where(['school_id' => Auth::user()->school_id])->where(function($query) use($currentSemester){
+                    (!empty($currentSemester)) ? $query->where('semester_id', $currentSemester->id)->orWhereNull('semester_id') : $query->orWhereNull('semester_id');
+                })->pluck('id');
+    
+                return $query->whereIn('class_subject_id', $class_subject_ids)->where(['teacher_id' => Auth::user()->id, 'school_id' => Auth::user()->school_id]);
+            }
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
         return $query;
     }
@@ -76,12 +85,25 @@ class SubjectTeacher extends Model {
         return $name;
     }
 
-    // public function scopeCurrentSemesterData($query){
-    //     $currentSemester = app(SemesterInterface::class)->default();
-    //     if($currentSemester){
-    //         $query->where(function ($query) use($currentSemester){
-    //             $query->where('semester_id', $currentSemester->id)->orWhereNull('semester_id');
-    //         });
-    //     }
-    // }
+    public function scopeCurrentSemesterData($query){
+        $currentSemester = app(CachingService::class)->getDefaultSemesterData();
+        if($currentSemester){
+            $query->where(function ($query) use($currentSemester){
+                $query->whereHas('class_subject',function($q) use($currentSemester) {
+                    $q->where('semester_id', $currentSemester->id)->orWhereNull('semester_id');
+                });
+                
+            });
+        }
+    }
+
+    /**
+     * Get the student_subject that owns the SubjectTeacher
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function student_subject()
+    {
+        return $this->belongsTo(StudentSubject::class, 'class_subject_id', 'class_subject_id');
+    }
 }

@@ -53,11 +53,25 @@
                                     ]) !!}
                                 </div>
 
+                                <div class="form-group col-sm-6 col-md-6">
+                                    <label>{{ __('attachments') }} <span class="text-small text-info"> ({{ __('upload_multiple_files') }})</span></label>
+                                    <input type="file" multiple name="files[]" id="uploadInput"
+                                           class="file-upload-default"/>
+                                    <div class="input-group col-xs-12">
+                                        <input type="text" class="form-control file-upload-info" disabled=""
+                                               placeholder="{{ __('files') }}" required aria-label=""/>
+                                        <span class="input-group-append">
+                                            <button class="file-upload-browse btn btn-theme"
+                                                    type="button">{{ __('upload') }}</button>
+                                        </span>
+                                    </div>
+                                </div>
+
                                 <div class="form-group col-sm-12 col-md-12 leave_dates mt-3">
 
                                 </div>
                             </div>
-                            <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right" type="submit" value={{ __('submit') }}>
                         </form>
 
                     </div>
@@ -94,7 +108,7 @@
                         <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                data-url="{{ route('leave.show', [1]) }}" data-click-to-select="true"
                                data-side-pagination="server" data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
-                               data-search="true" data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                               data-search="true" data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                data-mobile-responsive="true" data-sort-name="id" data-sort-order="desc"
                                data-maintain-selected="true" data-export-data-type='all'
@@ -105,12 +119,13 @@
                             <tr>
                                 <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{ __('id') }}</th>
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
-                                <th scope="col" data-field="from_date">{{ __('from_date') }}</th>
-                                <th scope="col" data-field="to_date">{{ __('to_date') }}</th>
-                                <th scope="col" data-field="days">{{ __('days') }}</th>
+                                <th scope="col" data-field="from_date" data-formatter="dateFormatter">{{ __('from_date') }}</th>
+                                <th scope="col" data-field="to_date" data-formatter="dateFormatter">{{ __('to_date') }}</th>
+                                <th scope="col" data-field="days">{{ __('total') }}</th>
                                 <th scope="col" data-events="tableDescriptionEvents" data-formatter="descriptionFormatter" data-field="reason">{{ __('reason') }}</th>
+                                <th scope="col" data-formatter="fileFormatter" data-field="files">{{ __('attachments') }}</th>
                                 <th scope="col" data-formatter="leaveStatusFormatter" data-field="status">{{ __('status') }}</th>
-                                <th scope="col" data-field="created_at">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateFormatter">{{ __('created_at') }}</th>
                                 <th data-events="leaveEvents" scope="col" data-field="operate" data-escape="false">
                                     {{ __('action') }}</th>
                             </tr>
@@ -168,11 +183,16 @@
                                     ]) !!}
                                 </div>
                             </div>
+
+                            <div class="form-group col-sm-12 col-md-12">
+                                <label>{{ __('attachments') }} </label>
+                                <div id="attachment"></div>
+                            </div>
+
                             <div class="form-group col-sm-12 col-md-12 edit_leave_dates mt-3"></div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light"
-                                    data-dismiss="modal">{{ __('Cancel') }}</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                         </div>
                     </form>
                 </div>
@@ -200,6 +220,7 @@
                     todayHighlight: true,
                     startDate: minDate,
                     endDate: maxDate,
+                    rtl: isRTL()
                 });
             });
         });

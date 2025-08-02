@@ -27,6 +27,21 @@ class Permission extends BasePermission {
                         });
                     });
                 }
+                // School related staffs
+                if (Auth::user()->school_id && !Auth::user()->hasRole('School Admin')) {
+                    $builder->whereHas('roles', function ($q) {
+                        $q->where(function ($q) {
+                            $q->where('school_id', Auth::user()->school_id)->whereIn('name', Auth::user()->getRoleNames());
+                        });
+                    });
+                } else if(!Auth::user()->hasRole('Super Admin') && !Auth::user()->school_id) {
+                    // Super admin related staffs
+                    $builder->whereHas('roles', function ($q) {
+                        $q->where(function ($q) {
+                            $q->whereNull('school_id')->whereIn('name', Auth::user()->getRoleNames());
+                        });
+                    });
+                }
             }
         });
     }

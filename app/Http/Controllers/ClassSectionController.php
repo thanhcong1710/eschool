@@ -7,10 +7,12 @@ use App\Repositories\ClassSection\ClassSectionInterface;
 use App\Repositories\ClassSubject\ClassSubjectInterface;
 use App\Repositories\ClassTeachers\ClassTeachersInterface;
 use App\Repositories\Semester\SemesterInterface;
+use App\Repositories\SessionYear\SessionYearInterface;
 use App\Repositories\SubjectTeacher\SubjectTeacherInterface;
 use App\Repositories\Timetable\TimetableInterface;
 use App\Repositories\User\UserRepository;
 use App\Services\BootstrapTableService;
+use App\Services\CachingService;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,8 +28,9 @@ class ClassSectionController extends Controller {
     private SubjectTeacherInterface $subjectTeachers;
     private TimetableInterface $timetable;
     private SemesterInterface $semester;
+    private CachingService $cache;
 
-    public function __construct(ClassSchoolInterface $class, ClassSectionInterface $classSection, UserRepository $userRepository, ClassSubjectInterface $classSubjects, ClassTeachersInterface $classTeachers, SubjectTeacherInterface $subjectTeachers, TimetableInterface $timetable, SemesterInterface $semester) {
+    public function __construct(ClassSchoolInterface $class, ClassSectionInterface $classSection, UserRepository $userRepository, ClassSubjectInterface $classSubjects, ClassTeachersInterface $classTeachers, SubjectTeacherInterface $subjectTeachers, TimetableInterface $timetable, SemesterInterface $semester, CachingService $cache) {
         $this->class = $class;
         $this->classSection = $classSection;
         $this->user = $userRepository;
@@ -36,6 +39,7 @@ class ClassSectionController extends Controller {
         $this->subjectTeachers = $subjectTeachers;
         $this->timetable = $timetable;
         $this->semester = $semester;
+        $this->cache = $cache;
     }
 
 
@@ -53,9 +57,54 @@ class ClassSectionController extends Controller {
         $sort = request('sort', 'id');
         $order = request('order', 'DESC');
 
-        $sql = $this->classSection->builder()->with(['class.stream', 'section', 'medium', 'class_teachers.teacher', 'subject_teachers.subject', 'subject_teachers.teacher', 'subject_teachers.semester:id,name','subject_teachers'=> function ($q){
-                $q->owner();
-            }]);
+        $semesters = $this->semester->builder()->get();
+
+        // $sql = $this->classSection->builder()->with(['class.stream', 'section', 'medium', 'class_teachers.teacher', 'subject_teachers', 'subject_teachers.teacher', 'subject_teachers.semester:id,name','subject_teachers.class_subject'=> function ($q){
+        //         $q->whereNull('deleted_at')->with('semester')
+        //         ->with('subject')->owner();
+        //     }]);
+        
+        $sql = $this->classSection->builder()->with(['class.stream', 'section', 'medium', 'class_teachers.teacher', 'class.shift' , 'subject_teachers'=> function ($q) {
+            $q->with('teacher')
+            ->has('class_subject')->with(['class_subject' => function($q) {
+                $q->whereNull('deleted_at')->with('semester');
+            }])
+            ->with('subject')->owner();
+        }])->where(function ($query) use ($request) {
+            if (!empty($request->class_id)) {
+                $query->where('class_id', $request->class_id);
+            }
+        
+            if (!empty($request->section_id)) {
+                $query->where('section_id', $request->section_id);
+            }
+        
+            if (!empty($request->medium_id)) {
+                $query->where('medium_id', $request->medium_id);
+            }
+        
+            if (!empty($request->teacher_id)) {
+                $query->whereHas('class_teachers', function ($q) use ($request) {
+                    $q->where('teacher_id', $request->teacher_id);
+                });
+            }
+        
+            if (!empty($request->subject_id)) {
+                $query->whereHas('subject_teachers', function ($q) use ($request) {
+                    $q->where('subject_id', $request->subject_id);
+                });
+            }
+        
+            if (!empty($request->class_subject_id)) {
+                $query->whereHas('subject_teachers.class_subject', function ($q) use ($request) {
+                    $q->where('id', $request->class_subject_id);
+                });
+            }
+        
+        })->when(!empty($showDeleted), function ($q) {
+            $q->onlyTrashed();
+        });
+
         //Show only Trashed Data
         if (!empty($request->show_deleted)) {
             $sql = $sql->onlyTrashed();
@@ -69,6 +118,10 @@ class ClassSectionController extends Controller {
                 })->orWhereHas('section', function ($q) use ($search) {
                     $q->where('name', 'LIKE', "%$search%");
                 })->orWhereHas('medium', function ($q) use ($search) {
+                    $q->where('name', 'LIKE', "%$search%");
+                })->orWhereHas('class_teachers.teacher', function ($q) use ($search) {
+                    $q->whereRaw("concat(first_name,' ',last_name) LIKE '%" . $search . "%'");
+                })->orWhereHas('subject_teachers.subject', function ($q) use ($search) {
                     $q->where('name', 'LIKE', "%$search%");
                 });
             });
@@ -105,7 +158,41 @@ class ClassSectionController extends Controller {
             $tempRow['no'] = $no++;
             $tempRow['class_teachers_list'] = $row->class_teachers->pluck('teacher.full_name');
             $tempRow['subject_teachers_list'] = $row->subject_teachers->pluck('subject_with_name');
+
+            $tempRow['current_sem_subject_teachers_list'] = array();
+            if ($row->class->include_semesters) {
+                
+                $tempRow['subject_teachers_with_semester'] = array();
+                foreach ($semesters as $semesterData) {
+                    $tempRow['subject_teachers'] = array();
+                    $teacherWithSubjectName = array();
+
+                    foreach ($row->subject_teachers as $teacherData) {
+                        if ($semesterData->current) {
+                            if ($teacherData->class_subject->semester_id == $semesterData->id) {
+                                $tempRow['current_sem_subject_teachers_list'][] = $teacherData->subject_with_name;
+                            }
+                        }
+
+                        if ($teacherData->class_subject->semester_id == $semesterData->id) {
+                            $teacherWithSubjectName[] = array(
+                                'teacher_name' => $teacherData->teacher->full_name,
+                                'subject_name' => $teacherData->subject_with_name,
+                            );
+                        }
+                    }
+
+                    $tempRow['subject_teachers_with_semester'][] = array(
+                        'semester_id'      => $semesterData->id,
+                        'semester_name'    => $semesterData->name,
+                        'subject_teachers' => $teacherWithSubjectName,
+                    );
+                }
+            }
+
             $tempRow['operate'] = $operate;
+            $tempRow['created_at'] = $row->created_at;
+            $tempRow['updated_at'] = $row->updated_at;
             $rows[] = $tempRow;
         }
 
@@ -144,7 +231,8 @@ class ClassSectionController extends Controller {
                         "class_section_id" => $id,
                         "teacher_id"       => $teacherId,
                     );
-                    $this->user->findById($teacherId)->givePermissionTo(['class-teacher', 'exam-upload-marks', 'exam-result',]);
+                    $this->user->findById($teacherId)->givePermissionTo(['class-teacher', 'exam-upload-marks', 'exam-result', 'attendance-list']);
+
                 }
                 // Update or Insert Data in Class Teachers on the basis of Class Section ID And TeacherID
                 $this->classTeachers->upsert($classTeachersData, ['class_section_id', 'teacher_id'], ['created_at', 'updated_at']);
@@ -164,6 +252,8 @@ class ClassSectionController extends Controller {
                                 "subject_id"       => $subjectTeachers->subject_id,
                                 "class_subject_id" => $subjectTeachers->class_subject_id,
                             );
+
+                            $this->user->findById($teacherId)->givePermissionTo(['exam-upload-marks', 'exam-result']);
                         }
                     }
                 }
@@ -271,7 +361,7 @@ class ClassSectionController extends Controller {
             // Check this teacher has another class teacher is exists
             $classTeachers = $this->classTeachers->builder()->where('teacher_id',$classTeacherID)->first();
             if (!$classTeachers) {
-                $teacher->revokePermissionTo(['class-teacher', 'exam-upload-marks', 'exam-result',]);
+                $teacher->revokePermissionTo(['class-teacher', 'exam-upload-marks', 'exam-result']);
             }
             DB::commit();
             ResponseService::successResponse('Data Deleted Successfully');
@@ -286,6 +376,10 @@ class ClassSectionController extends Controller {
         ResponseService::noPermissionThenRedirect('class-section-edit');
         try {
             DB::beginTransaction();
+            $subjectTeachers =   $this->subjectTeachers->builder()->where('teacher_id',$teacherID)->first();
+            if (!$subjectTeachers) {
+                $this->user->findById($teacherID)->revokePermissionTo(['exam-upload-marks', 'exam-result']);
+            }
             $this->subjectTeachers->builder()->where(['class_section_id' => $classSectionID, 'teacher_id' => $teacherID, 'subject_id' => $subjectID])->delete();
             DB::commit();
             ResponseService::successResponse('Data Deleted Successfully');

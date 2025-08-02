@@ -8,6 +8,7 @@ use App\Repositories\User\UserInterface;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\ResponseService;
+use App\Services\SubscriptionService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,23 +19,56 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Throwable;
 use TypeError;
+use App\Exports\TeacherDataExport;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\TeacherImport;
+use App\Repositories\ExtraFormField\ExtraFormFieldsInterface;
+use App\Repositories\FormField\FormFieldsInterface;
+use App\Services\SessionYearsTrackingsService;
+use Illuminate\Validation\ValidationException;
+use App\Repositories\PayrollSetting\PayrollSettingInterface;
+use App\Repositories\StaffSalary\StaffSalaryInterface;
+use App\Services\UserService;
+use Illuminate\Http\UploadedFile;
 
 class TeacherController extends Controller {
     private UserInterface $user;
     private StaffInterface $staff;
     private SubscriptionInterface $subscription;
     private CachingService $cache;
+    private SubscriptionService $subscriptionService;
+    private PayrollSettingInterface $payrollSetting;
+    private StaffSalaryInterface $staffSalary;
+    private FormFieldsInterface $formFields;
+    private ExtraFormFieldsInterface $extraFormFields;
+    private SessionYearsTrackingsService $sessionYearsTrackingsService;
 
-    public function __construct(StaffInterface $staff, UserInterface $user, SubscriptionInterface $subscription, CachingService $cache) {
+
+    public function __construct(StaffInterface $staff, UserInterface $user, SubscriptionInterface $subscription, CachingService $cache, SubscriptionService $subscriptionService, PayrollSettingInterface $payrollSetting, StaffSalaryInterface $staffSalary, FormFieldsInterface $formFields, ExtraFormFieldsInterface $extraFormFields, SessionYearsTrackingsService $sessionYearsTrackingsService) {
         $this->user = $user;
         $this->staff = $staff;
         $this->subscription = $subscription;
         $this->cache = $cache;
+        $this->subscriptionService = $subscriptionService;
+        $this->payrollSetting = $payrollSetting;
+        $this->staffSalary = $staffSalary;
+        $this->formFields = $formFields;
+        $this->extraFormFields = $extraFormFields;
+        $this->sessionYearsTrackingsService = $sessionYearsTrackingsService;
     }
 
     public function index() {
         ResponseService::noPermissionThenRedirect('teacher-list');
-        return view('teacher.index');
+
+        $allowances = $this->payrollSetting->builder()->where('type', 'allowance')->get();
+        $deductions = $this->payrollSetting->builder()->where('type', 'deduction')->get();
+
+        if(Auth::user()->school_id) {
+            $extraFields = $this->formFields->defaultModel()->where('user_type', 2)->orderBy('rank')->get();    
+        } else {
+            $extraFields = $this->formFields->defaultModel()->orderBy('rank')->get();
+        }
+        return view('teacher.index',compact('allowances', 'deductions','extraFields'));
     }
 
     public function store(Request $request) {
@@ -44,12 +78,13 @@ class TeacherController extends Controller {
             'last_name'         => 'required',
             'gender'            => 'required',
             'email'             => 'required|email|unique:users,email',
-            'mobile'            => 'required|numeric|digits_between:10,16',
+            'mobile'            => 'required|numeric|digits_between:1,16',
             'dob'               => 'required|date|unique:users,email',
             'qualification'     => 'required',
             'current_address'   => 'required',
             'permanent_address' => 'required',
             'status'            => 'nullable|in:0,1',
+            'image'             => 'nullable|image|mimes:jpeg,png,jpg,svg,gif,webp',
         ]);
         try {
             DB::beginTransaction();
@@ -71,15 +106,25 @@ class TeacherController extends Controller {
                 }
             }
 
-
-            $teacher_plain_text_password = str_replace('-', '', date('d-m-Y', strtotime($request->dob)));
+            // If prepaid plan check student limit
+            $subscription = $this->subscriptionService->active_subscription(Auth::user()->school_id);
+            if ($subscription && $subscription->package_type == 0) {
+                $status = $this->subscriptionService->check_user_limit($subscription, "Staffs");
+                
+                if (!$status) {
+                    ResponseService::errorResponse('You reach out limits');
+                }
+            }
 
             $user_data = array(
                 ...$request->all(),
-                'password'          => Hash::make($teacher_plain_text_password),
+                'password'          => Hash::make($request->mobile),
                 'image'             => $request->file('image'),
                 'status'            => $request->status ?? 0,
-                'deleted_at'        => $request->status == 1 ? null : '1970-01-01 01:00:00'
+                'deleted_at'        => $request->status == 1 ? null : '1970-01-01 01:00:00',
+                'two_factor_enabled' => 0,
+                'two_factor_secret' => null,
+                'two_factor_expires_at' => null,
             );
 
             //Call store function of User Repository and get the User Data
@@ -87,27 +132,82 @@ class TeacherController extends Controller {
 
             $user->assignRole('Teacher');
 
-            $this->staff->create([
+            // Store Extra Details
+            $extraDetails = array();
+            if (isset($request->extra_fields) && is_array($request->extra_fields)) {
+                foreach ($request->extra_fields as $fields) {
+                    $data = null;
+                    if (isset($fields['data'])) {
+                        $data = (is_array($fields['data']) ? json_encode($fields['data'], JSON_THROW_ON_ERROR) : $fields['data']);
+                    }
+                    $extraDetails[] = array(
+                        'user_id'       => $user->id,
+                        'form_field_id' => $fields['form_field_id'],
+                        'data'          => $data,
+                    );
+                }
+            }
+
+            if (!empty($extraDetails)) {
+                $this->extraFormFields->createBulk($extraDetails);
+            }
+
+            $staff = $this->staff->create([
                 'user_id'       => $user->id,
                 'qualification' => $request->qualification,
-                'salary'        => $request->salary
+                'salary'        => $request->salary,
+                'joining_date'   => date('Y-m-d',strtotime($request->joining_date))
             ]);
-            DB::commit();
-            $school_name = Auth::user()->school->name;
-            $data = [
-                'subject'     => 'Welcome to ' . $school_name,
-                'name'        => $request->first_name,
-                'email'       => $request->email,
-                'password'    => $teacher_plain_text_password,
-                'school_name' => $school_name
-            ];
 
-            Mail::send('teacher.email', $data, static function ($message) use ($data) {
-                $message->to($data['email'])->subject($data['subject']);
-            });
+            $allowance_data = array();
+            $allowance_status = 0;
+            foreach ($request->allowance ?? [] as $allowance) 
+            {
+                if ($allowance['id']) {
+                    $allowance_status = 1;
+                    $allowance_data[] = [
+                        'staff_id' => $staff->id,
+                        'payroll_setting_id' =>  $allowance['id'],
+                        'amount' => $allowance['amount'] ??  null,
+                        'percentage' => $allowance['percentage'] ?? null
+                    ];
+                }
+            }
+            if ($allowance_status) {
+                $this->staffSalary->upsert($allowance_data,['staff_id','payroll_setting_id'],['amount','percentage']);
+            }
+
+            $deduction_data = array();
+            $deduction_status = 0;
+            foreach ($request->deduction ?? [] as $deduction) {
+
+                if ($deduction['id']) {
+                    $deduction_status = 1;
+                    $deduction_data[] = [
+                        'staff_id' => $staff->id,
+                        'payroll_setting_id' =>  $deduction['id'],
+                        'amount' => $deduction['amount'] ??  null,
+                        'percentage' => $deduction['percentage'] ?? null
+                    ];
+                }
+            }
+            if ($deduction_status) {
+                $this->staffSalary->upsert($deduction_data,['staff_id','payroll_setting_id'],['amount','percentage']);
+            }
+
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            if($sessionYear){
+                $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\Teacher', $user->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+            }
+
+            DB::commit();
+            $sendEmail = app(UserService::class);
+            $sendEmail->sendStaffRegistrationEmail($user, $request->mobile);
+            DB::commit();
             ResponseService::successResponse('Data Stored Successfully');
         } catch (Throwable $e) {
             if (Str::contains($e->getMessage(), ['Failed', 'Mail', 'Mailer', 'MailManager'])) {
+                DB::commit();
                 ResponseService::warningResponse("Teacher Registered successfully. But Email not sent.");
             } else {
                 DB::rollback();
@@ -125,7 +225,7 @@ class TeacherController extends Controller {
         $order = request('order', 'DESC');
         $search = request('search');
         $showDeleted = request('show_deactive');
-        $sql = $this->user->builder()->role('Teacher')->with('staff')
+        $sql = $this->user->builder()->role('Teacher')->with('staff','staff.staffSalary','extra_student_details.form_field')
             ->where(function ($query) use ($search) {
                 $query->when($search, function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")
@@ -133,13 +233,11 @@ class TeacherController extends Controller {
                     ->orwhere('last_name', 'LIKE', "%$search%")
                     ->orwhere('gender', 'LIKE', "%$search%")
                     ->orwhere('email', 'LIKE', "%$search%")
-                    ->orwhere('dob', 'LIKE', "%" . date('Y-m-d', strtotime($search)) . "%")
                     ->orwhere('current_address', 'LIKE', "%$search%")
                     ->orwhere('permanent_address', 'LIKE', "%$search%")
                     ->whereHas('staff', function ($q) use ($search) {
                         $q->orwhere('staffs.qualification', 'LIKE', "%$search%");
                     });
-
                 });
             })
             ->when(!empty($showDeleted), function ($query) {
@@ -155,20 +253,24 @@ class TeacherController extends Controller {
         foreach ($res as $row) {
             if ($showDeleted) {
                 //Show Restore and Hard Delete Buttons
-                // $operate = BootstrapTableService::button('fa fa-calendar', route('timetable.teacher.show', $row->id), ['btn-gradient-success'], ['title' => "View Timetable"]);
-                $operate = BootstrapTableService::button('fa fa-check', route('teachers.change-status', $row->id), ['activate-teacher', 'btn-gradient-success'], ['title' => "Activate"]);
-                $operate .= BootstrapTableService::trashButton(route('teachers.trash', $row->id));
+                $operate = BootstrapTableService::menuButton('active',route('teachers.change-status', $row->id),['activate-teacher'],[]);
+                $operate .= BootstrapTableService::menuTrashButton('delete',route('teachers.trash', $row->id));
+                
             } else {
                 //Show Edit and Soft Delete Buttons
-                $operate = BootstrapTableService::editButton(route('teachers.update', $row->id));
-                $operate .= BootstrapTableService::button('fa fa-calendar', route('timetable.teacher.show', $row->id), ['btn-gradient-success'], ['title' => "View Timetable"]);
-                $operate .= BootstrapTableService::button('fa fa-exclamation-triangle', route('teachers.change-status', $row->id), ['deactivate-teacher', 'btn-gradient-info'], ['title' => "Deactivate"]);
-                $operate .= BootstrapTableService::trashButton(route('teachers.trash', $row->id));
+                
+                $operate = BootstrapTableService::menuEditButton('edit',route('teachers.update', $row->id));
+                $operate .= BootstrapTableService::menuButton('View Timetable',route('timetable.teacher.show', $row->id),[],[]);
+                $operate .= BootstrapTableService::menuButton('inactive',route('teachers.change-status', $row->id),['deactivate-teacher'],[]);
+                $operate .= BootstrapTableService::menuButton('salary_structure',route('staff.payroll-structure', $row->id),[],[]);
+                $operate .= BootstrapTableService::menuTrashButton('delete',route('teachers.trash', $row->id));
+                
             }
 
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
-            $tempRow['operate'] = $operate;
+            // $tempRow['dob'] = format_date($row->dob);
+            $tempRow['operate'] = BootstrapTableService::menuItem($operate);
             $rows[] = $tempRow;
         }
 
@@ -191,7 +293,7 @@ class TeacherController extends Controller {
             'last_name'         => 'required',
             'gender'            => 'required',
             'email'             => 'required|email|unique:users,email,' . $id,
-            'mobile'            => 'required|numeric|digits_between:10,16',
+            'mobile'            => 'required|numeric|digits_between:1,16',
             'dob'               => 'required|date',
             'qualification'     => 'required',
             'current_address'   => 'required',
@@ -209,11 +311,52 @@ class TeacherController extends Controller {
                 $user_data['image'] = $request->file('image');
             }
 
+            if ($request->reset_password) {
+                $user_data['password'] = Hash::make($request->mobile);
+            }
+
+            if ($request->two_factor_verification == 1) {
+                $user_data['two_factor_secret'] = null;
+                $user_data['two_factor_expires_at'] = null;
+                $user_data['two_factor_enabled'] = 1;
+            } else {
+                $user_data['two_factor_secret'] = null;
+                $user_data['two_factor_expires_at'] = null;
+                $user_data['two_factor_enabled'] = 0;
+            }
+
             //Call store function of User Repository and get the User Data
             $user = $this->user->update($id, $user_data);
 
+            // Store Extra Details
+            $extraDetails = [];
+            foreach ($request->extra_fields ?? [] as $fields) {
+                if ($fields['input_type'] == 'file') {
+                    if (isset($fields['data']) && $fields['data'] instanceof UploadedFile) {
+                        $extraDetails[] = array(
+                            'id'            => $fields['id'],
+                            'user_id'    => $user->id,
+                            'form_field_id' => $fields['form_field_id'],
+                            'data'          => $fields['data']
+                        );
+                    }
+                } else {
+                    $data = null;
+                    if (isset($fields['data'])) {
+                        $data = (is_array($fields['data']) ? json_encode($fields['data'], JSON_THROW_ON_ERROR) : $fields['data']);
+                    }
+                    $extraDetails[] = array(
+                        'id'            => $fields['id'],
+                        'user_id'    => $user->id,
+                        'form_field_id' => $fields['form_field_id'],
+                        'data'          => $data,
+                    );
+                }
+            }
+            $this->extraFormFields->upsert($extraDetails, ['id'], ['data']);
+
             //Call store function of User Repository and get the User Data
-            $this->staff->update($user->staff->id, array('qualification' => $request->qualification, 'salary' => $request->salary));
+            $this->staff->update($user->staff->id, array('qualification' => $request->qualification, 'salary' => $request->salary,'joining_date'   => date('Y-m-d',strtotime($request->joining_date))));
 
             DB::commit();
             ResponseService::successResponse('Data Updated Successfully');
@@ -249,6 +392,19 @@ class TeacherController extends Controller {
         try {
             DB::beginTransaction();
             $teacher = $this->user->findTrashedById($id);
+
+            if ($teacher->status == 0) {
+                // If prepaid plan check student limit
+                $subscription = $this->subscriptionService->active_subscription(Auth::user()->school_id);
+                if ($subscription && $subscription->package_type == 0) {
+                    $status = $this->subscriptionService->check_user_limit($subscription, "Staffs");
+                    
+                    if (!$status) {
+                        ResponseService::errorResponse('You reach out limits');
+                    }
+                }
+            }
+
             $this->user->builder()->where('id',$id)->withTrashed()->update(['status' => $teacher->status == 0 ? 1 : 0,'deleted_at' => $teacher->status == 1 ? now() : null]);
             DB::commit();
             ResponseService::successResponse('Data Updated Successfully');
@@ -265,6 +421,17 @@ class TeacherController extends Controller {
             $userIds = json_decode($request->ids);
             foreach ($userIds as $userId) {
                 $teacher = $this->user->findTrashedById($userId);
+                if ($teacher->status == 0) {
+                    // If prepaid plan check student limit
+                    $subscription = $this->subscriptionService->active_subscription(Auth::user()->school_id);
+                    if ($subscription && $subscription->package_type == 0) {
+                        $status = $this->subscriptionService->check_user_limit($subscription, "Staffs");
+                        
+                        if (!$status) {
+                            ResponseService::errorResponse('You reach out limits');
+                        }
+                    }
+                }
                 $this->user->builder()->where('id',$userId)->withTrashed()->update(['status' => $teacher->status == 0 ? 1 : 0,'deleted_at' => $teacher->status == 1 ? now() : null]);
             }
             DB::commit();
@@ -274,4 +441,39 @@ class TeacherController extends Controller {
             ResponseService::errorResponse();
         }
     }
+    public function bulkUploadIndex()
+    {
+        ResponseService::noAnyPermissionThenSendJson(['teacher-create', 'teacher-edit']);
+        return view('teacher.bulk_upload');
+       
+    }
+    public function storeBulkUpload(Request $request)
+    {
+        ResponseService::noAnyPermissionThenSendJson(['teacher-create', 'teacher-edit']);
+        $validator = Validator::make($request->all(), [
+            'file'             => 'required|mimes:csv,txt'
+        ]);
+        if ($validator->fails()) {
+            ResponseService::errorResponse($validator->errors()->first());
+        }
+        try {
+            Excel::import(new TeacherImport($request->is_send_notification), $request->file('file'));
+            ResponseService::successResponse('Data Stored Successfully');
+        } catch (ValidationException $e) {
+            ResponseService::errorResponse($e->getMessage());
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e, "Teacher Controller -> Store Bulk method");
+            ResponseService::errorResponse();
+        }                                                                                                                               
+    }
+
+    public function downloadSampleFile() {
+        try {
+            return Excel::download(new TeacherDataExport(), 'teachers.xlsx');
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e, 'Teacher Controller ---> Download Sample File');
+            ResponseService::errorResponse();
+        }
+    }
+
 }

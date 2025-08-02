@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Auth;
-
+use App\Models\SessionYearsTracking;
 
 class Students extends Model {
     use SoftDeletes;
@@ -16,13 +16,18 @@ class Students extends Model {
 
     protected $fillable = [
         'user_id',
+        'class_id',
         'class_section_id',
         'admission_no',
         'roll_number',
         'admission_date',
         'guardian_id',
         'school_id',
-        'session_year_id'
+        'session_year_id',
+        'application_type',
+        'application_status',
+        'join_session_year_id',
+        'leave_session_year_id'
     ];
     protected $appends = ['first_name','last_name','full_name'];
 
@@ -32,17 +37,20 @@ class Students extends Model {
                 return $query;
             }
 
-            if (Auth::user()->hasRole('School Admin')) {
-                return $query->where('school_id', Auth::user()->school_id);
-            }
-
-            if (Auth::user()->hasRole('Student')) {
-                return $query->where('school_id', Auth::user()->school_id);
-            }
-
             if (Auth::user()->hasRole('Teacher')) {
-                $classSectionID = ClassTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id');
-                return $query->whereIn('class_section_id', $classSectionID);
+                $classSectionID = ClassTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id')->toArray();
+                $subjectTeachers = SubjectTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id')->toArray();
+                $class_section_ids = array_merge($classSectionID, $subjectTeachers);
+                return $query->whereIn('class_section_id', $class_section_ids);
+            }
+
+            if (Auth::user()->school_id || Auth::user()->hasRole('Student') || Auth::user()->hasRole('School Admin')) {
+                $cache = app(CachingService::class);
+                $query->with(['session_years_trackings' => function ($q) use ($cache) {
+                    $q->where('modal_type', 'App\Models\Students')
+                      ->where('session_year_id', $cache->getDefaultSessionYear()->id);
+                }]);
+                return $query->where('school_id', Auth::user()->school_id);
             }
         }
 
@@ -59,6 +67,10 @@ class Students extends Model {
 
     public function class_section() {
         return $this->belongsTo(ClassSection::class)->withTrashed();
+    }
+
+    public function class() {
+        return $this->belongsTo(ClassSchool::class)->withTrashed();
     }
 
     public function subjects() {
@@ -194,4 +206,45 @@ class Students extends Model {
         }
         return collect($subjects);
     }
+
+    /**
+     * Get all of the exam_result for the Students
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function exam_result()
+    {
+        return $this->hasMany(ExamResult::class, 'student_id', 'user_id');
+    }
+
+    /**
+     * Get all of the attendance for the Students
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function attendance()
+    {
+        return $this->hasMany(Attendance::class, 'student_id', 'user_id');
+    }
+
+    public function session_year() {
+        return $this->belongsTo(SessionYear::class, 'session_year_id');
+    }
+
+    public function shift() {
+        return $this->belongsTo(Shift::class, 'shift_id', 'id');
+    }
+
+    public function session_years_trackings()
+    {
+        return $this->hasMany(SessionYearsTracking::class, 'modal_id', 'id')->where('modal_type', 'App\Models\Students');
+    }
+
+    public function student_subjects() {
+        return $this->hasMany(StudentSubject::class, 'student_id', 'user_id');
+    }
+
+    // public function elective_subject_groups() {
+    //     return $this->hasMany(ElectiveSubjectGroup::class, 'class_id', 'class_id');
+    // }
 }

@@ -23,15 +23,19 @@
                         <div class="form-group">
                             <form class="edit-form" data-success-function="formSuccessFunction" action="{{ route('exam.timetable.update',$exam->id) }}" data-pre-submit-function="classValidation" method="POST">
                                 <div class="row">
-                                    <div class="form-group col-md-6">
+                                    <div class="form-group col-md-4">
                                         <label>{{ __('exam') }} </label>
                                         {!! Form::hidden('semester_id', $exam->semester_id ?? null) !!}
                                         {!! Form::hidden('session_year_id', $exam->session_year_id) !!}
                                         {!! Form::text('', $exam->name, ['readonly' => true ,'class' => 'form-control']) !!}
                                     </div>
-                                    <div class="form-group col-md-6">
+                                    <div class="form-group col-md-4">
                                         <label>{{ __('Class') }} </label>
                                         {!! Form::text('', $exam->class->full_name, ['readonly' => true ,'class' => 'form-control']) !!}
+                                    </div>
+                                    <div class="form-group col-md-4">
+                                        <label>{{ __('Exam Result Submission Date') }} <span class="text-danger">*</span></label>
+                                            {!! Form::text('last_result_submission_date', $last_result_submission_date, ['class' => 'timetable-date form-control', 'placeholder' => __('Exam Result Submission Date'), 'required',]) !!}
                                     </div>
                                 </div>
 
@@ -77,7 +81,7 @@
                                                     {!! Form::text('date', null, ['class' => 'timetable-date form-control', 'placeholder' => __('date'), 'required']) !!}
                                                 </div>
                                                 <div class="form-group col-md-1 pl-0 mt-4" data-repeater-delete>
-                                                    <button type="button" class="btn btn-inverse-danger btn-icon remove-exam-timetable-content">
+                                                    <button type="button" {{ $disabled }} class="btn btn-inverse-danger btn-icon remove-exam-timetable-content">
                                                         <i class="fa fa-times"></i>
                                                     </button>
                                                 </div>
@@ -88,12 +92,12 @@
                                         </div>
                                     </div>
                                     <div class="row col-md-4 mt-3 mb-3">
-                                        <button type="button" class="btn btn-success add-exam-timetable-content" title="Add new row" data-repeater-create>
-                                            Add New Data
+                                        <button type="button" {{ $disabled }} class="btn btn-success add-exam-timetable-content" title="Add new row" data-repeater-create>
+                                            {{ __('Add New Data') }}
                                         </button>
                                     </div>
                                 </div>
-                                <input type="submit" class="btn btn-theme" value={{ __('submit') }} />
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" {{ $disabled }} type="submit" value={{ __('submit') }}>
                             </form>
                         </div>
                     </div>
@@ -137,6 +141,7 @@
                     todayHighlight: true,
                     startDate: minDate,
                     endDate: maxDate,
+                    rtl: isRTL()
                 });
             });
         });

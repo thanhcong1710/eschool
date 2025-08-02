@@ -16,6 +16,7 @@ class SystemSetting extends Model {
     ];
 
     public $timestamps = false;
+    protected $connection = 'mysql';
 
     public function getDataAttribute($value) {
         if ($this->attributes['type'] == 'file') {

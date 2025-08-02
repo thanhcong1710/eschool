@@ -14,11 +14,13 @@ return [
         'INVALID_USER_DETAILS'           => 110,
         'NOT_UNIQUE_IN_CLASS'            => 113,
         'GRADES_NOT_FOUND'               => 114,
+        'INACTIVE_CHILD'                 => 115,
         'SUCCESS'                        => 200,
         'EXAM_ALREADY_PUBLISHED'         => 400,
         'EXAM_NOT_COMPLETED'             => 401,
         'ENABLE_PAYMENT_GATEWAY'         => 404,
-        'FEE_ALREADY_PAID'               => 405
+        'FEE_ALREADY_PAID'               => 405,
+        'INACTIVATED_USER'               => 116,
     ],
     'CACHE'         => [
         'SYSTEM' => [

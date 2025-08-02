@@ -103,7 +103,7 @@
                             </div>
 
                             <div class="text-center">
-                                <input class="btn btn-theme mt-5" type="submit" value="Submit">
+                                <input class="btn btn-theme mt-5" type="submit" value="{{ __('submit') }}">
                             </div>
                         </div>
                     </form>

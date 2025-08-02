@@ -11,16 +11,21 @@
 @if ($lang)
     @if ($lang->is_rtl)
         <link rel="stylesheet" href="{{ asset('/assets/css/rtl.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('/assets/css/custom-rtl.css') }}">
     @else
         <link rel="stylesheet" href="{{ asset('/assets/css/style.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('/assets/css/custom.css') }}">
     @endif
 @else
     <link rel="stylesheet" href="{{ asset('/assets/css/style.min.css') }}">
+    <link rel="stylesheet" href="{{ asset('/assets/css/custom.css') }}">
 @endif
 
-<link rel="stylesheet" href="{{ asset('/assets/css/custom.css') }}">
+<link rel="stylesheet" href="{{ asset('/assets/css/comman.css') }}">
 <link rel="stylesheet" href="{{ asset('/assets/css/datepicker.min.css') }}">
+<link rel="stylesheet" href="{{ asset('/assets/css/daterangepicker.css') }}">
 <link rel="stylesheet" href="{{ asset('/assets/css/ekko-lightbox.css') }}">
+<link rel="stylesheet" href="{{ asset('/assets/css/jquery.tagsinput.min.css') }}">
 
 {{--<link rel="stylesheet" href="{{ asset('/assets/bootstrap-table/bootstrap-table.min.css') }}">--}}
 <link rel="stylesheet" href="https://unpkg.com/bootstrap-table@1.22.1/dist/bootstrap-table.min.css">
@@ -32,13 +37,33 @@
 
 {{-- <link rel="shortcut icon" href="{{asset(config('global.LOGO_SM')) }}" /> --}}
 <link rel="shortcut icon" href="{{$schoolSettings['favicon'] ?? $systemSettings['favicon'] ?? url('assets/vertical-logo.svg') }}"/>
+
 {{--<script src="">--}}
 {{--    window.trans = {};--}}
 {{--</script>--}}
-<script src="{{url('/js/lang.js')}}"></script>
+<script src="{{url('/js/lang')}}"></script>
 <style>
     :root {
         --theme-color: <?=$systemSettings['theme_color']??"#22577A" ?>;
+    }
+    /* Custom styles for sidebar sub-categories */
+    .sub-category {
+        padding: 10px 0 5px 15px;
+        font-weight: bold;
+        color: #6c7293;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        margin-top: 10px;
+        border-left: 3px solid #3e4b5b;
+    }
+    .nav-item.pl-3 .nav-link {
+        padding-left: 15px !important;
+        font-size: 0.85rem;
+    }
+    .nav-item.pl-3 .nav-link i.small-icon {
+        font-size: 8px;
+        margin-right: 5px;
+        vertical-align: middle;
     }
 </style>
 <script>
@@ -52,7 +77,6 @@
         } else {
             image.src = "{{asset('/assets/no_image_available.jpg')}}";
         }
-        // console.log('Image failed to load: ' + image.src);
     }
 
     // Create a MutationObserver to watch for DOM changes

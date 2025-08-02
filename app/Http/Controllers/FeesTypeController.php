@@ -4,16 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Repositories\FeesType\FeesTypeInterface;
 use App\Services\BootstrapTableService;
+use App\Services\CachingService;
 use App\Services\ResponseService;
+use App\Services\SessionYearsTrackingsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class FeesTypeController extends Controller {
     private FeesTypeInterface $feesType;
+    private SessionYearsTrackingsService $sessionYearsTrackingsService;
+    private CachingService $cache;
 
-    public function __construct(FeesTypeInterface $feesType) {
+    public function __construct(FeesTypeInterface $feesType, SessionYearsTrackingsService $sessionYearsTrackingsService, CachingService $cache) {
         $this->feesType = $feesType;
+        $this->sessionYearsTrackingsService = $sessionYearsTrackingsService;
+        $this->cache = $cache;
     }
 
     public function index() {
@@ -27,7 +34,14 @@ class FeesTypeController extends Controller {
         ResponseService::noPermissionThenRedirect('fees-type-create');
         try {
             DB::beginTransaction();
-            $this->feesType->create($request->except('_token'));
+            $feesType = $this->feesType->create($request->except('_token'));
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $semester = $this->cache->getDefaultSemesterData();
+            if ($semester) {
+                $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\FeesType', $feesType->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, $semester->id);
+            } else {
+                $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\FeesType', $feesType->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+            }
             DB::commit();
             ResponseService::successResponse('Data Stored Successfully');
         } catch (Throwable $e) {
@@ -47,7 +61,7 @@ class FeesTypeController extends Controller {
         $search = request('search');
         $showDeleted = request('show_deleted');
 
-        $sql = $this->feesType->builder()
+        $sql = $this->feesType->builder()->with('session_years_trackings')
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('id', 'LIKE', "%$search%")
@@ -60,6 +74,12 @@ class FeesTypeController extends Controller {
             ->when(!empty($showDeleted), function ($query) {
                 $query->onlyTrashed();
             });
+
+        $sessionYear = $this->cache->getDefaultSessionYear();
+        $sql->whereHas('session_years_trackings', function ($q) use ($sessionYear) {
+            $q->where('session_year_id', $sessionYear->id);
+        });
+
         $total = $sql->count();
 
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
@@ -106,6 +126,13 @@ class FeesTypeController extends Controller {
         ResponseService::noPermissionThenSendJson('fees-type-delete');
         try {
             $this->feesType->deleteById($id);
+            // $sessionYear = $this->cache->getDefaultSessionYear();
+            // $semester = $this->cache->getDefaultSemesterData();
+            // if ($semester) {
+            //     $this->sessionYearsTrackingsService->deleteSessionYearsTracking('App\Models\FeesType', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, $semester->id);
+            // } else {
+            //     $this->sessionYearsTrackingsService->deleteSessionYearsTracking('App\Models\FeesType', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+            // }
             ResponseService::successResponse('Data Deleted Successfully');
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e, "FeesTypeController -> destroy method");

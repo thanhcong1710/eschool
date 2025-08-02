@@ -95,16 +95,20 @@
                         <form method="POST" action="{{ route('password.update') }}">
                             @csrf
                             <input type="hidden" name="token" value="{{ $token }}">
+
+                            <div class="form-group">
+                                <label>{{ __('school_code') }}</label>
+                                <input id="school_code" type="school_code" class="form-control form-control-lg" name="school_code" value="{{ old('school_code') }}" autocomplete="school_code" autofocus placeholder="{{ __('school_code') }}">
+                            </div>
+
                             <div class="form-group">
                                 <label>{{ __('email') }}</label>
-                                {{-- <input type="text" name="username" required class="form-control form-control-lg" placeholder="{{__('username')}}"> --}}
                                 <input id="email" type="email" class="form-control form-control-lg" name="email"
                                        value="{{ old('email') }}" required autocomplete="email" autofocus
                                        placeholder="{{ __('email') }}">
                             </div>
                             <div class="form-group">
                                 <label>{{ __('password') }}</label>
-                                {{-- <input type="password" name="password" required class="form-control form-control-lg" placeholder="{{__('password')}}"> --}}
 
                                 <div class="input-group">
                                     <input id="password" type="password" class="form-control form-control-lg"

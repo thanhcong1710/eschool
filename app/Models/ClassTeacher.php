@@ -16,19 +16,22 @@ class ClassTeacher extends Model
     );
 
     protected $appends = ['class_id'];
+    protected $hidden = ['created_at','updated_at'];
 
     public function scopeOwner($query)
     {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+        if(Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;

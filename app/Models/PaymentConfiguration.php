@@ -18,7 +18,17 @@ class PaymentConfiguration extends Model
         'currency_code',
         'currency_symbol',
         'school_id',
+        'bank_name',
+        'account_name',
+        'account_no',
     ];
+
+    public function getConnectionName()
+    {
+        // Replace this with your logic to determine the connection name
+        // For example, you might get it from session or config
+        return session('db_connection_name') ?? config('database.default');
+    }
 
     public function scopeOwner($query)
     {

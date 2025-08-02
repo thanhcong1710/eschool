@@ -22,4 +22,9 @@ class Role extends BaseRole {
             }
         });
     }
+
+    public function session_years_trackings()
+    {
+        return $this->hasMany(SessionYearsTracking::class, 'modal_id', 'id')->where('modal_type', 'App\Models\Role');
+    }
 }

@@ -32,7 +32,9 @@
                                         {!! Form::textarea('description', null, ['required','rows' => '2', 'placeholder' => __('description'), 'class' => 'form-control']) !!}
                                     </div>
                                 </div>
-                                <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                                {{-- <input class="btn btn-theme" type="submit" value={{ __('submit') }}> --}}
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                             </form>
                         </div>
                     </div>
@@ -45,9 +47,6 @@
                             <h4 class="card-title">
                                 {{ __('list') . ' ' . __('faqs') }}
                             </h4>
-                            <div class="row" id="toolbar">
-
-                            </div>
                             <div class="row">
                                 <div class="col-12">
                                     <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
@@ -55,10 +54,10 @@
                                            data-side-pagination="server" data-pagination="true"
                                            data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
                                            data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true"
-                                           data-fixed-columns="true" data-fixed-number="2" data-fixed-right-number="1"
+                                           data-fixed-columns="false" data-fixed-number="2" data-fixed-right-number="1"
                                            data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
                                            data-sort-order="desc" data-maintain-selected="true"
-                                           data-export-data-type='all'
+                                           data-export-data-type='all' data-show-export="true"
                                            data-export-options='{ "fileName": "faqs-list-<?= date('d-m-y') ?>","ignoreColumn": ["operate"]}'
                                            data-query-params="queryParams" data-escape="true">
                                         <thead>
@@ -66,7 +65,7 @@
                                             <th scope="col" data-field="id" data-sortable="true" data-visible="false"> {{ __('id') }} </th>
                                             <th scope="col" data-field="no"> {{ __('no.') }} </th>
                                             <th scope="col" data-field="title">{{ __('title') }} </th>
-                                            <th scope="col" data-field="description">{{ __('description') }}</th>
+                                            <th scope="col" data-field="description" data-formatter='descriptionFormatter' data-events="tableDescriptionEvents" >{{ __('description') }}</th>
                                             @if (Auth::user()->can('faqs-edit') || Auth::user()->can('faqs-delete'))
                                                 <th data-events="faqsEvents" data-width="150" scope="col" data-field="operate" data-escape="false">{{ __('action') }}</th>
                                             @endif
@@ -111,7 +110,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                     </div>
                 </form>

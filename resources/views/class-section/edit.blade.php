@@ -28,7 +28,7 @@
                                 <hr>
                                 <div class="row">
                                     <div class="col-md-4 col-sm-12 col-12">
-                                        <h4 class="mb-3">{{ __('Class Teachers') }}</h4>
+                                        <h4 class="mb-3">{{ __('Class Teacher') }}</h4>
                                         <div class="form-group">
                                             {{--                                            <select name="class_teacher_id" id="class_teacher_id" class="form-control select2" required="required" multiple>--}}
                                             <select multiple name="class_teacher_id[]" id="class_teacher_id" data-class-section="{{$classSection->id}}" class="form-control select2-dropdown select2-hidden-accessible" style="width:100%;" tabindex="-1" aria-hidden="true" data-placeholder="{{__("Search Teacher Name")}}">
@@ -40,7 +40,7 @@
                                     </div>
                                 </div>
                                 <hr>
-                                <h4 class="mb-3">{{ __('Subject Teachers') }}</h4>
+                                <h4 class="mb-3">{{ __('Subject Teacher') }}</h4>
 
                                 @if($classSection->class->include_semesters == 1)
                                     @foreach ($semesters as $key => $data)
@@ -106,7 +106,7 @@
                                 </div>
                                 @endif
 
-                                <input class="btn btn-theme mt-1" type="submit" value={{ __('submit') }} />
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
 
                             </div>
                         </form>

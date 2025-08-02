@@ -9,9 +9,11 @@ use App\Repositories\ElectiveSubjectGroup\ElectiveSubjectGroupInterface;
 use App\Repositories\Medium\MediumInterface;
 use App\Repositories\Section\SectionInterface;
 use App\Repositories\Semester\SemesterInterface;
+use App\Repositories\SessionYear\SessionYearInterface;
 use App\Repositories\Shift\ShiftInterface;
 use App\Repositories\Stream\StreamInterface;
 use App\Repositories\Subject\SubjectInterface;
+use App\Repositories\Timetable\TimetableInterface;
 use App\Rules\uniqueForSchool;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
@@ -33,8 +35,9 @@ class ClassSchoolController extends Controller {
     private SemesterInterface $semester;
     private ShiftInterface $shift;
     private StreamInterface $stream;
+    private TimetableInterface $timetable;
 
-    public function __construct(MediumInterface $medium, SectionInterface $section, ClassSchoolInterface $class, ClassSectionInterface $classSection, SubjectInterface $subject, ClassSubjectInterface $classSubject, ElectiveSubjectGroupInterface $electiveSubjectGroup, SemesterInterface $semester, CachingService $cache, ShiftInterface $shift, StreamInterface $stream) {
+    public function __construct(MediumInterface $medium, SectionInterface $section, ClassSchoolInterface $class, ClassSectionInterface $classSection, SubjectInterface $subject, ClassSubjectInterface $classSubject, ElectiveSubjectGroupInterface $electiveSubjectGroup, SemesterInterface $semester, CachingService $cache, ShiftInterface $shift, StreamInterface $stream, TimetableInterface $timetable) {
         $this->medium = $medium;
         $this->section = $section;
         $this->class = $class;
@@ -46,6 +49,7 @@ class ClassSchoolController extends Controller {
         $this->cache = $cache;
         $this->shift = $shift;
         $this->stream = $stream;
+        $this->timetable = $timetable;
     }
 
 
@@ -214,6 +218,11 @@ class ClassSchoolController extends Controller {
             // Check that If Elective Subjects exists then merge or else store only Core Subjects
             $classSubjects = array_merge($coreSubjects, $electiveSubject);
             $this->classSubject->upsert($classSubjects, ['class_id', 'subject_id', 'semester_id'], ['type']);
+
+            $this->timetable->builder()->whereHas('class_section', function($q) use($id) {
+                $q->where('class_id',$id);
+            })->delete();
+
             DB::commit();
             ResponseService::successResponse('Data Updated Successfully');
         } catch (Throwable $e) {
@@ -241,6 +250,8 @@ class ClassSchoolController extends Controller {
                         $q->where('name', 'LIKE', "%$search%");
                     })->orWhereHas('medium', function ($q) use ($search) {
                         $q->where('name', 'LIKE', "%$search%");
+                    })->orWhereHas('shift', function ($q) use ($search) {
+                        $q->where('name', 'LIKE', "%$search%");
                     })->Owner();
                 });
             })
@@ -250,6 +261,11 @@ class ClassSchoolController extends Controller {
         if (!empty($request->medium_id)) {
             $sql = $sql->where('medium_id', $request->medium_id);
         }
+
+        if (!empty($request->shift_id)) { 
+            $sql = $sql->where('shift_id', $request->shift_id);
+        }
+
         $total = $sql->count();
 
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
@@ -280,6 +296,8 @@ class ClassSchoolController extends Controller {
             
             $tempRow['semesters'] = $semesters;
             $tempRow['operate'] = $operate;
+            $tempRow['created_at'] = $row->created_at;
+            $tempRow['updated_at'] = $row->updated_at;
             $rows[] = $tempRow;
         }
 
@@ -345,7 +363,7 @@ class ClassSchoolController extends Controller {
 
     public function classSubjectEdit($id) {
         ResponseService::noPermissionThenRedirect('class-edit');
-        $class = $this->class->findById($id, ['*'], ['stream', 'sections', 'core_subjects:id', 'elective_subject_groups.subjects:id']);
+        $class = $this->class->findById($id, ['*'], ['stream', 'sections', 'core_subjects', 'elective_subject_groups.subjects:id']);
         $subjects = $this->subject->builder()->where('medium_id', $class->medium_id)->orderBy('id', 'ASC')->get();
         $semesters = $class->include_semesters ? $this->semester->all() : [];
         return response(view('class-subject.edit', compact('class', 'subjects', 'id', 'semesters')));
@@ -376,6 +394,8 @@ class ClassSchoolController extends Controller {
                 }
             }
 
+            $this->classSubject->builder()->where('class_id',$id)->delete();
+
             // Upsert Elective Subjects
             $electiveSubject = [];
             if (!empty($request->elective_subject_group)) {
@@ -397,7 +417,22 @@ class ClassSchoolController extends Controller {
             }
             // Check that If Elective Subjects exists then merge or else store only Core Subjects
             $classSubjects = array_merge($coreSubjects, $electiveSubject);
-            $this->classSubject->upsert($classSubjects, ['class_id', 'subject_id', 'semester_id'], ['type']);
+
+            foreach ($classSubjects as $subject) {
+                // Check if the subject exists in the database
+                $existingSubject = $this->classSubject->builder()->onlyTrashed()
+                    ->where('class_id', $subject['class_id'])
+                    ->where('subject_id', $subject['subject_id'])
+                    ->where('semester_id', $subject['semester_id'])
+                    ->first();
+            
+                // If the subject exists and is soft-deleted, restore it
+                if ($existingSubject && $existingSubject->trashed()) {
+                    $existingSubject->restore();
+                }
+            }
+
+            $this->classSubject->upsert($classSubjects, ['class_id', 'subject_id', 'semester_id'], ['type','elective_subject_group_id']);
             DB::commit();
             ResponseService::successResponse('Data Updated Successfully');
         } catch (Throwable $e) {
@@ -435,6 +470,27 @@ class ClassSchoolController extends Controller {
         if (!empty($request->medium_id)) {
             $sql = $sql->where('medium_id', $request->medium_id);
         }
+
+        if (!empty($request->shift_id)) {
+            $sql = $sql->where('shift_id', $request->shift_id);
+        }
+
+        if (!empty($request->stream_id)) {
+            $sql = $sql->where('stream_id', $request->stream_id);
+        }
+
+        if (!empty($request->core_subject_id)) {
+            $sql = $sql->whereHas('core_subjects', function($q) use ($request) {
+                $q->where('id', $request->core_subject_id);
+            });
+        }
+
+        if (!empty($request->elective_subject_group_id)) {
+            $sql = $sql->whereHas('elective_subject_groups.subjects', function($q) use ($request) {
+                $q->where('id', $request->elective_subject_group_id);
+            });
+        }
+
         $total = $sql->count();
 
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
@@ -445,24 +501,35 @@ class ClassSchoolController extends Controller {
         $rows = array();
         $no = 1;
         foreach ($res as $row) {
-            $operate = BootstrapTableService::editButton(route('class.subject.edit', $row->id), false);
+            $operate = '';
+            if ($showDeleted) {
+                $operate = BootstrapTableService::restoreButton(route('class.restore', $row->id));
+            } else {
+                $operate = BootstrapTableService::editButton(route('class.subject.edit', $row->id), false);
+            }
+            
+            
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
             $tempRow['section_names'] = $row->sections->pluck('name');
             $tempRow['semesters'] = $semesters;
+            $tempRow['semester_wise_core_subjects'] = array();
             if ($row->include_semesters && !empty($currentSemester)) {
-                $tempRow['core_subjects'] = $row->core_subjects->filter(function ($data) use ($currentSemester) {
+                $tempRow['core_subjects'] = array_values($row->core_subjects->filter(function ($data) use ($currentSemester) {
                     return $data->pivot->semester_id == $currentSemester->id;
-                });
+                })->toArray());
 
                 $tempRow['elective_subject_groups'] = $row->elective_subject_groups->filter(function ($data) use ($currentSemester) {
                     return $data->semester_id == $currentSemester->id;
                 });
-                $tempRow['semester_wise_core_subjects'] = $row->core_subjects->groupBy('pivot.semester_id');
-                $tempRow['semester_wise_elective_subject_groups'] = $row->elective_subject_groups->groupBy('semester_id');
+
+                $tempRow['semester_wise_core_subjects'] = $row->core_subjects;
+                $tempRow['semester_wise_elective_subject_groups'] = $row->elective_subject_groups;
             }
 
             $tempRow['operate'] = $operate;
+            $tempRow['created_at'] = $row->created_at;
+            $tempRow['updated_at'] = $row->updated_at;
             $rows[] = $tempRow;
         }
 
@@ -498,5 +565,57 @@ class ClassSchoolController extends Controller {
             ResponseService::logErrorResponse($e, "ClassSchool Controller ->deleteClassSubjectGroup Method", 'cannot_delete_because_data_is_associated_with_other_data');
             ResponseService::errorResponse();
         }
+    }
+
+    public function classAttendance($id = null)
+    {
+        ResponseService::noPermissionThenSendJson('attendance-list');
+        try {
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $sql = $this->classSection->builder()->select('id','section_id')->where('class_id',$id)->with('section')
+            ->withCount(['attendance as present' => function($q) use($sessionYear) {
+                $q->where('type',1)->where('session_year_id',$sessionYear->id);
+            }])
+            ->withCount(['attendance as absent' => function($q) use($sessionYear) {
+                $q->where('type',0)->where('session_year_id',$sessionYear->id);
+            }])
+            ->withCount(['attendance' => function($q) use($sessionYear) {
+                $q->where('session_year_id',$sessionYear->id);
+            }])
+            ->get();
+
+            $data = $sql->map(function($q) {
+                if ($q->attendance_count) {
+                    return [
+                        $q->section->name, number_format(($q->present * 100) / $q->attendance_count, 2)
+                    ];    
+                }
+            })->toArray();
+
+            $data = array_filter($data);
+            if (count($data)) {
+                $attendance = [
+                    'section' => $this->pluck($data,0),
+                    'data' => $this->pluck($data,1)
+                ];    
+            } else {
+                $attendance = [
+                    'section' => ['A','B','C','D'],
+                    'data' => [0,0,0,0]
+                ];
+            }
+            
+
+            ResponseService::successResponse('Data Fetched Successfully',$attendance);
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e);
+            ResponseService::errorResponse();
+        }
+    }
+
+    public function pluck($array, $key) {
+        return array_map(function($item) use ($key) {
+            return $item[$key];
+        }, $array);
     }
 }

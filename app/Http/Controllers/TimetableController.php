@@ -12,11 +12,13 @@ use App\Repositories\SubjectTeacher\SubjectTeacherInterface;
 use App\Repositories\Timetable\TimetableInterface;
 use App\Repositories\User\UserInterface;
 use App\Services\BootstrapTableService;
+use App\Services\SessionYearsTrackingsService;
 use App\Services\CachingService;
 use App\Services\ResponseService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use Throwable;
 
 class TimetableController extends Controller {
@@ -29,8 +31,9 @@ class TimetableController extends Controller {
     private CachingService $cache;
     private ClassSchoolInterface $class;
     private MediumInterface $medium;
+    private SessionYearsTrackingsService $sessionYearsTrackingsService;
 
-    public function __construct(SubjectTeacherInterface $subjectTeacher, SubjectInterface $subject, TimetableInterface $timetable, ClassSectionInterface $classSection, UserInterface $user, SchoolSettingInterface $schoolSettings, CachingService $cache, ClassSchoolInterface $class, MediumInterface $medium) {
+    public function __construct(SubjectTeacherInterface $subjectTeacher, SubjectInterface $subject, TimetableInterface $timetable, ClassSectionInterface $classSection, UserInterface $user, SchoolSettingInterface $schoolSettings, CachingService $cache, ClassSchoolInterface $class, MediumInterface $medium, SessionYearsTrackingsService $sessionYearsTrackingsService) {
         $this->subjectTeacher = $subjectTeacher;
         $this->subject = $subject;
         $this->timetable = $timetable;
@@ -40,6 +43,7 @@ class TimetableController extends Controller {
         $this->cache = $cache;
         $this->class = $class;
         $this->medium = $medium;
+        $this->sessionYearsTrackingsService = $sessionYearsTrackingsService;
     }
 
     public function index() {
@@ -78,6 +82,13 @@ class TimetableController extends Controller {
                 ...$request->all(),
                 'type' => (!empty($request->subject_id)) ? "Lecture" : "Break"
             ]);
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $semester = $this->cache->getDefaultSemesterData();
+            if($semester){
+                $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\Timetable', $timetable->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, $semester->id);
+            }else{
+                $this->sessionYearsTrackingsService->storeSessionYearsTracking('App\Models\Timetable', $timetable->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+            }
             ResponseService::successResponse('Data Stored Successfully', $timetable);
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);
@@ -91,15 +102,48 @@ class TimetableController extends Controller {
         $currentSemester = $this->cache->getDefaultSemesterData();
         $classSection = $this->classSection->findById($classSectionID, ['*'], ['class', 'class.stream', 'section', 'medium']);
 
-        $subjectTeachers = $this->subjectTeacher->builder()->with('subject:id,name,type,bg_color', 'teacher:id,first_name,last_name')->whereHas('class_section', function ($q) use ($classSectionID) {
-            $q->where('id', $classSectionID);
-        })->orderBy('subject_id', 'ASC')->get();
+        $subjectTeachers = $this->subjectTeacher->builder()
+            ->with([
+                'subject:id,name,type,bg_color',
+                'teacher:id,first_name,last_name',
+                'class_subject'
+            ])
+            ->whereHas('class_section', function ($q) use ($classSectionID) {
+                $q->where('id', $classSectionID);
+            })
+            ->whereHas('class_subject',function($q) {
+                $q->whereNull('deleted_at');
+            })
+            ->orderBy('subject_id', 'ASC')
+            ->CurrentSemesterData()
+            ->get();
 
-        $subjectWithoutTeacherAssigned = $this->subject->builder()->whereHas('class_subjects', function ($q) use ($classSection) {
-            $q->where('class_id', $classSection->class_id)->CurrentSemesterData();
-        })->select(['id', 'name', 'type', 'bg_color'])->whereNotIn('id', $subjectTeachers->pluck('subject_id'))->get();
+        $subjectWithoutTeacherAssigned = $this->subject->builder()
+            ->with(['class_subjects' => function($query) use ($classSection) {
+                $query->where('class_id', $classSection->class_id)
+                      ->CurrentSemesterData();
+            }])
+            ->whereHas('class_subjects', function ($q) use ($classSection) {
+                $q->where('class_id', $classSection->class_id)
+                ->CurrentSemesterData();
+            })
+            ->select(['id', 'name', 'type', 'bg_color'])
+            ->whereNotIn('id', $subjectTeachers->pluck('subject_id'))
+            ->get();
 
-        $timetables = $this->timetable->builder()->where('class_section_id', $classSectionID)->with('teacher:users.id,first_name,last_name', 'subject')->CurrentSemesterData()->get();
+        $timetables = $this->timetable->builder()
+            ->where('class_section_id', $classSectionID)
+            ->with([
+                'teacher:users.id,first_name,last_name',
+                'subject:id,name,type,bg_color',
+                'subject.class_subjects' => function($query) use ($classSection) {
+                    $query->where('class_id', $classSection->class_id)
+                          ->CurrentSemesterData();
+                },
+                'subject_teacher.class_subject'
+            ])
+            ->CurrentSemesterData()
+            ->get();
 
         // Get Timetable Settings Data
         $timetableSettingsData = $this->schoolSettings->getBulkData([
@@ -147,9 +191,22 @@ class TimetableController extends Controller {
         $sort = request('sort', 'id');
         $order = request('order', 'DESC');
 
-        $sql = $this->classSection->builder()->with(['class:id,name,stream_id', 'class.stream', 'section:id,name', 'medium:id,name', 'timetable' => function ($query) {
-            $query->CurrentSemesterData()->with('subject:id,name,type');
-        }]);
+        $schoolSettings = $this->cache->getSchoolSettings([
+            'timetable_start_time', 'timetable_end_time', 'timetable_duration'
+        ]);
+
+        if ($schoolSettings->timetable_start_time ?? '' && $schoolSettings->timetable_end_time ?? '') {
+            $sql = $this->classSection->builder()->with(['class:id,name,stream_id', 'class.stream', 'section:id,name', 'medium:id,name', 'timetable' => function ($query) use($schoolSettings){
+                $query->CurrentSemesterData()
+                ->where('start_time','>=',$schoolSettings->timetable_start_time)->where('end_time','<=',$schoolSettings->timetable_end_time)->with('subject:id,name,type');
+            }]);
+        } else {
+            $sql = $this->classSection->builder()->with(['class:id,name,stream_id', 'class.stream', 'section:id,name', 'medium:id,name', 'timetable' => function ($query) {
+                $query->CurrentSemesterData()->with('subject:id,name,type');
+            }]);
+        }
+
+        
         if (!empty($request->search)) {
             $search = $request->search;
             $sql->where(function ($query) use ($search) {
@@ -167,6 +224,41 @@ class TimetableController extends Controller {
         if (!empty($request->medium_id)) {
             $sql = $sql->where('medium_id', $request->medium_id);
         }
+
+        if (!empty($request->class_id)) {
+            $sql = $sql->where('class_id', $request->class_id);
+        }
+
+        if (!empty($request->section_id)) {
+            $sql = $sql->where('section_id', $request->section_id);
+        }
+
+        if (!empty($request->medium_id)) {
+            $sql = $sql->where('medium_id', $request->medium_id);
+        }
+
+        if (!empty($request->teacher_id)) {
+            $sql = $sql->whereHas('class_teachers', function ($q) use ($request) {
+                $q->where('teacher_id', $request->teacher_id);
+            });
+        }
+
+        if (!empty($request->subject_id)) {
+            $sql = $sql->whereHas('subject_teachers', function ($q) use ($request) {
+                $q->where('subject_id', $request->subject_id);
+            });
+        }
+
+        if (!empty($request->class_subject_id)) {
+            $sql = $sql->whereHas('subject_teachers.class_subject', function ($q) use ($request) {
+                $q->where('id', $request->class_subject_id);
+            });
+        }
+
+        if (!empty($showDeleted)) {
+            $sql = $sql->onlyTrashed();
+        }
+
         $total = $sql->count();
 
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
@@ -178,6 +270,7 @@ class TimetableController extends Controller {
         $no = 1;
         foreach ($res as $row) {
             $operate = BootstrapTableService::editButton(route('timetable.edit', $row->id), false);
+            $operate .= BootstrapTableService::button('fa fa-trash', '#', ['delete-class-timetable', 'btn-gradient-danger'], ['title' => trans("Delete Class Timetable"), 'data-id' => $row->id]);
             $tempRow = $row->toArray();
             $timetable = $row->timetable->groupBy('day')->sortBy('start_time');
             $tempRow['no'] = $no++;
@@ -201,6 +294,8 @@ class TimetableController extends Controller {
         ResponseService::noPermissionThenSendJson('timetable-delete');
         try {
             Timetable::find($id)->delete();
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->deleteSessionYearsTracking('App\Models\Timetable', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
             ResponseService::successResponse('Data Deleted Successfully');
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);
@@ -234,6 +329,40 @@ class TimetableController extends Controller {
             $sql->where(function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")->orwhereRaw("concat(first_name,' ',last_name) LIKE '%" . $search . "%'");
             });
+        }
+
+        if (!empty($request->class_id)) {
+            $sql->whereHas('timetable.class_section.class', function ($q) use ($request) {
+                $q->where('id', $request->class_id);
+            });
+        }
+        
+        if (!empty($request->section_id)) {
+            $sql->whereHas('timetable.class_section.section', function ($q) use ($request) {
+                $q->where('id', $request->section_id);
+            });
+        }
+        
+        if (!empty($request->subject_id)) {
+            $sql->whereHas('timetable.subject', function ($q) use ($request) {
+                $q->where('id', $request->subject_id);
+            });
+        }
+        
+        if (!empty($request->teacher_id)) {
+            $sql->where('id', $request->teacher_id);
+        }
+        
+        if (!empty($request->status)) {
+            $sql->where('status', $request->status);
+        }
+        
+        if (!empty($request->role)) {
+            $sql->where('role', $request->role);
+        }
+        
+        if (!empty($request->created_at)) {
+            $sql->whereDate('created_at', '=', $request->created_at);
         }
 
         $total = $sql->count();
@@ -288,15 +417,15 @@ class TimetableController extends Controller {
                 'timetable_start_time', 'timetable_end_time', 'timetable_duration'
             );
 
-            $timeTableExistsBeforeStartTime = $this->timetable->builder()->where('start_time', '<', date('H:i:s', strtotime($request->time_table_start_time)))->get();
-            if (!empty($timeTableExistsBeforeStartTime->toArray())) {
-                ResponseService::errorResponse("Updates are prohibited as there are pre-existing lectures scheduled before " . $request->time_table_start_time);
-            }
+            // $timeTableExistsBeforeStartTime = $this->timetable->builder()->where('start_time', '<', date('H:i:s', strtotime($request->time_table_start_time)))->get();
+            // if (!empty($timeTableExistsBeforeStartTime->toArray())) {
+            //     ResponseService::errorResponse("Updates are prohibited as there are pre-existing lectures scheduled before " . $request->time_table_start_time);
+            // }
 
-            $timeTableExistsAfterEndTime = $this->timetable->builder()->where('end_time', '>', date('H:i:s', strtotime($request->time_table_end_time)))->get();
-            if (!empty($timeTableExistsAfterEndTime->toArray())) {
-                ResponseService::errorResponse("Updates are prohibited as there are pre-existing lectures scheduled after " . $request->time_table_end_time);
-            }
+            // $timeTableExistsAfterEndTime = $this->timetable->builder()->where('end_time', '>', date('H:i:s', strtotime($request->time_table_end_time)))->get();
+            // if (!empty($timeTableExistsAfterEndTime->toArray())) {
+            //     ResponseService::errorResponse("Updates are prohibited as there are pre-existing lectures scheduled after " . $request->time_table_end_time);
+            // }
 
             $data = array();
             foreach ($settings as $row) {
@@ -307,11 +436,27 @@ class TimetableController extends Controller {
                 ];
             }
             $this->schoolSettings->upsert($data, ["name"], ["data", "type"]);
+            $this->cache->removeSchoolCache(config('constants.CACHE.SCHOOL.SETTINGS'));
             DB::commit();
             ResponseService::successResponse('Data Updated Successfully');
         } catch (Throwable $e) {
             DB::rollBack();
             ResponseService::logErrorResponse($e, "Timetable Controller -> updateTimetableSettings");
+            ResponseService::errorResponse();
+        }
+    }
+
+    public function deleteClassTimetable($id)
+    {
+        ResponseService::noFeatureThenRedirect('Timetable Management');
+        ResponseService::noPermissionThenSendJson('timetable-delete');
+        try {
+            $this->timetable->builder()->where('class_section_id',$id)->delete();
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->deleteSessionYearsTracking('App\Models\Timetable', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
+            ResponseService::successResponse('Data Deleted Successfully');
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e);
             ResponseService::errorResponse();
         }
     }

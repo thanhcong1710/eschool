@@ -20,7 +20,6 @@
                         </h4>
                         <div class="row" id="toolbar">
                             <div class="form-group col-sm-12 col-md-4">
-                                {{-- <label>{{ __('Class') }} {{ __('section') }} <span class="text-danger">*</span></label> --}}
                                 <select required name="class_section_id" id="timetable_class_section" class="form-control select2" style="width:100%;" tabindex="-1" aria-hidden="true">
                                     <option value="">{{__('select')}}</option>
                                     @foreach($class_sections as $section)
@@ -29,7 +28,6 @@
                                 </select>
                             </div>
                             <div class="form-group col-sm-12 col-md-4">
-                                {{-- <label>{{ __('date') }} <span class="text-danger">*</span></label> --}}
                                 {!! Form::text('date', null, ['required', 'placeholder' => __('date'), 'class' => 'datepicker-popup form-control','id'=>'date','data-date-end-date'=>"0d",'autocomplete'=>'off']) !!}
                                 <span class="input-group-addon input-group-append">
                             </span>
@@ -50,7 +48,7 @@
                                    data-toggle="table" data-url="{{ route('attendance.list.show',1) }}" data-click-to-select="true"
                                    data-side-pagination="server" data-pagination="true"
                                    data-page-list="[5, 10, 20, 50, 100, 200,All]" data-search="true" data-toolbar="#toolbar"
-                                   data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                                   data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                    data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                    data-mobile-responsive="true" data-sort-name="id" data-sort-order="desc"
                                    data-maintain-selected="true" data-export-data-type='all' data-show-export="true"

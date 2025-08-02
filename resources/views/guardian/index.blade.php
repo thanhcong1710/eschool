@@ -72,15 +72,32 @@
                         <h4 class="card-title">
                             {{ __('list') . ' ' . __('Guardian') }}
                         </h4>
+                        <div class="row mt-3" id="toolbar">
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label class="filter-menu">{{ __('Class') }} <span class="text-danger">*</span></label>
+                                <select name="filter_class_id" id="filter_class_id" class="form-control">
+                                    <option value="">{{ __('all_class') }}</option>
+                                    @foreach ($classes as $class)
+                                        <option value={{ $class->id }}>{{$class->full_name}}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group col-sm-12 col-md-4">
+                                <label class="filter-menu">{{ __('class_section') }} <span class="text-danger">*</span></label>
+                                <select required name="filter_class_section_id" class="form-control" id="filter_class_section_id">
+                                    <option value="">{{ __('all_section') }}</option>
+                                </select>
+                            </div>
+                        </div>
                         <div class="row">
                             <div class="col-12">
                                 <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                        data-url="{{ route('guardian.show',1) }}" data-click-to-select="true"
                                        data-side-pagination="server" data-pagination="true" data-toolbar="#toolbar"
                                        data-show-columns="true" data-show-refresh="true" data-search="true" data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
-                                       data-sort-order="desc" data-maintain-selected="true" data-export-data-type='all'
+                                       data-sort-order="desc" data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
                                        data-export-options='{ "fileName": "guardian-list-<?= date('d-m-y') ?>" ,"ignoreColumn": ["operate"]}'
-                                       data-query-params="queryParams" data-escape="true">
+                                       data-query-params="guardianQueryParams" data-escape="true">
                                     <thead>
                                     <tr>
                                         <th scope="col" data-sortable="true" data-visible="false" data-align="center" data-field="id"> {{ __('id') }}</th>
@@ -166,9 +183,22 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="row">
+                            <div class="form-group col-sm-12 col-md-4">
+                                <div class="d-flex">
+                                    <div class="form-check w-fit-content">
+                                        <label class="form-check-label ml-4">
+                                            <input type="checkbox" class="form-check-input" name="reset_password" value="1">{{ __('reset_password') }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                     </div>
                 </form>

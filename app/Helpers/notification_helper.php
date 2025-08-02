@@ -2,61 +2,107 @@
 
 use App\Models\User;
 use App\Services\CachingService;
+use Google\Client;
 
 function send_notification($user, $title, $body, $type, $customData = []) {
-    $FcmToken = User::where('fcm_id', '!=', '')->whereIn('id', $user)->get()->pluck('fcm_id');
+    $FcmTokens = User::where('fcm_id', '!=', '')->whereIn('id', $user)->get()->pluck('fcm_id');
 
     $cache = app(CachingService::class);
 
-    $url = 'https://fcm.googleapis.com/fcm/send';
-    $serverKey = $cache->getSystemSettings('fcm_server_key');
 
-    $notification_data1 = [
-        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-        "title"        => $title,
-        "body"         => $body,
-        "type"         => $type,
-        ...$customData
+    $project_id = $cache->getSystemSettings('firebase_project_id');
+    $url = 'https://fcm.googleapis.com/v1/projects/' . $project_id . '/messages:send';
 
-    ];
+    $access_token = getAccessToken();
+   
+    foreach ($FcmTokens as $FcmToken) {
 
-    $notification_data2 = [
-        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
-        "type"         => $type,
-        ...$customData
-    ];
+        $data = [
+            "message" => [
+                "token" => $FcmToken,
+                "notification" => [
+                    "title" => $title,
+                    "body" => $body
+                ],
+                "data" => [
+                    "title" => $title,
+                    "body" => $body,
+                    "type" => $type,
+                    ...$customData
+                ],
+                "android" => [
+                    "notification"=> [
+                        'click_action' => 'FLUTTER_NOTIFICATION_CLICK',
+                        "sound" => "default"  // This is for Android sound
+                    ],
+                    "priority" => "high"
+                   
+                ],
+                "apns" => [
+                    "headers" => [
+                        "apns-priority" => "10" // Set APNs priority to 10 (high) for immediate delivery
+                    ],
+                    "payload" => [
+                        "aps" => [
+                            "alert" => [
+                                "title" => $title,
+                                "body" => $body,
+                            ],
+                            "type" => $type,
+                            ...$customData,
+                            "sound" => "default",  // This is for iOS sound
+                            "mutable-content" => 1, 
+                            "content-available" => 1
+                        ]
+                    ]
+                ]
+            ]
+        ];
 
-    $data = [
-        "registration_ids" => $FcmToken,
-        "notification"     => $notification_data1,
-        "data"             => $notification_data2,
-        "priority"         => "high"
-    ];
-    $encodedData = json_encode($data);
+        $encodedData = json_encode($data);
+       
+        $headers = [
+            'Authorization: Bearer ' . $access_token,
+            'Content-Type: application/json',
+        ];
 
-    $headers = [
-        'Authorization:key=' . $serverKey,
-        'Content-Type: application/json',
-    ];
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
 
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_POST, true);
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        // Disabling SSL Certificate support temporarly
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $encodedData);
 
-    // Disabling SSL Certificate support temporarily
-    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $encodedData);
+        // Execute post
+        $result = curl_exec($ch);
+        // dd($result);
+        if ($result == FALSE) {
+            die('Curl failed: ' . curl_error($ch));
+        }
+        // Close connection
+        curl_close($ch);
+    }    
+}
 
-    // Execute post
-    if (!curl_exec($ch)) {
-        die('Curl failed: ' . curl_error($ch));
-    }
-    // dd($result);
+function getAccessToken()
+{
+    $cache = app(CachingService::class);
 
-    // Close connection
-    curl_close($ch);
+    $file_name = $cache->getSystemSettings('firebase_service_file');
+    $data = explode("storage/", $file_name ?? '');
+    $file_name = end($data);
+
+    $file_path = base_path('public/storage/'. $file_name);
+
+    $client = new Client();
+    $client->setAuthConfig($file_path);
+    $client->setScopes(['https://www.googleapis.com/auth/firebase.messaging']);
+    $accessToken = $client->fetchAccessTokenWithAssertion()['access_token'];
+
+    return $accessToken;
 }

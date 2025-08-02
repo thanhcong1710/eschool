@@ -108,6 +108,8 @@ class SectionController extends Controller {
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
             $tempRow['operate'] = $operate;
+            $tempRow['created_at'] = $row->created_at;
+            $tempRow['updated_at'] = $row->updated_at;
             $rows[] = $tempRow;
         }
 

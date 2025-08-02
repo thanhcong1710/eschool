@@ -27,6 +27,10 @@ class PaymentService {
         }
         return match ($paymentGateway) {
             'stripe' => new StripePayment($payment->secret_key, $payment->currency_code),
+            'razorpay' => new RazorpayPayment($payment->secret_key, $payment->api_key, $payment->currency_code),
+            'flutterwave' => new FlutterwavePayment($payment->secret_key, $payment->api_key, $payment->currency_code),
+            'paystack' => new PaystackPayment($payment->secret_key, $payment->api_key, $payment->currency_code),
+
             // any other payment processor implementations
             default => throw new InvalidArgumentException('Invalid Payment Gateway.'),
         };
@@ -43,17 +47,17 @@ class PaymentService {
         //IF School ID is not empty then find the details in PaymentConfiguration Model
         return match ($paymentGateway) {
             'stripe' => [
-                'id'              => $paymentIntentData->id,
-                'amount'          => $paymentIntentData->amount,
-                'amount_received' => $paymentIntentData->amount_received,
-                'currency'        => $paymentIntentData->currency,
-                'metadata'        => $paymentIntentData->metadata,
-                'status'          => match ($paymentIntentData->status) {
+                'id'              => $paymentIntentData['id'],
+                'amount'          => $paymentIntentData['amount'],
+                'amount_received' => $paymentIntentData['amount_received'],
+                'currency'        => $paymentIntentData['currency'],
+                'metadata'        => $paymentIntentData['metadata'],
+                'status'          => match ($paymentIntentData['status']) {
                     "canceled" => "failed",
                     "succeeded" => "succeed",
                     "processing", "requires_action", "requires_capture", "requires_confirmation", "requires_payment_method" => "pending",
                 },
-                'actual_status'   => $paymentIntentData->status
+                'actual_status'   => $paymentIntentData['status']
             ],
             // any other payment processor implementations
             default => $paymentIntentData,

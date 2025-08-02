@@ -27733,6 +27733,7 @@ div.tagsinput span.tag a {
     position: relative;
     display: block;
     width: 100%;
+    margin-bottom: 30px;
 }
 
 .wizard>.steps .current-info {
@@ -31991,7 +31992,7 @@ input:checked+.feature-list, .feature-list-default {
 .package-expire-date {
     font-style: italic;
 }
-.billing_cycle {
+.billing_cycle, .package-type {
     border-radius: 8px;
 }
 .custom-card-body {
@@ -32044,4 +32045,135 @@ input:checked+.feature-list, .feature-list-default {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* Help Modal CSS */
+.steps-guide {
+    padding: 15px 5px;
+}
+
+.step-number {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+    background: var(--theme-color);
+    color: #fff;
+}
+
+/* Step Content */
+.step-content {
+    flex: 1;
+    line-height: 1.5;
+}
+
+/* Help Trigger Icon */
+.help-trigger {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none !important;
+}
+
+.help-icon {
+    font-size: 20px;
+    color: var(--theme-color);
+    margin-left: 8px;
+    transition: all 0.3s ease;
+}
+
+.help-icon:hover {
+    color: var(--theme-color-dark);
+    transform: scale(1.1);
+}
+
+/* Help Modal Layout */
+.help-modal .modal-body {
+    padding: 0px;
+}
+
+.help-modal .step:last-child {
+    margin-bottom: 0 !important;
+}
+
+.help-modal .badge-primary {
+    background: var(--theme-color);
+    color: #fff;
+}
+
+.help-modal .modal-footer {
+    border-top: 0;
+    padding: 1rem;
+}
+
+/* Help Modal Header */
+.help-modal .modal-header {
+    background: var(--theme-color);
+}
+
+.help-modal .modal-header .modal-title {
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    display: flex;
+    align-items: center;
+}
+
+.help-modal .close {
+    color: #fff;
+    opacity: 0.75;
+    padding: 0.5rem;
+    margin: -0.5rem -0.5rem -0.5rem auto;
+}
+
+.help-modal .close:hover {
+    opacity: 1;
+}
+
+/* Step Icons */
+.help-modal .step-icon-wrapper {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.help-modal .step-icon {
+    font-size: 24px;
+    color: var(--theme-color);
+}
+
+.help-modal .step-number {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    width: 20px;
+    height: 20px;
+    font-size: 12px;
+    background: var(--theme-color);
+    color: #fff;
+}
+
+/* Step Text */
+.help-modal .step-title {
+    color: var(--theme-color);
+    font-weight: 500;
+}
+
+.help-modal .step-description {
+    color: #6c757d;
+}
+
+/* Misc Spacing */
+.mdi {
+    line-height: 1;
+}
+
+.me-1 {
+    margin-right: 0.25rem !important;
+}
+
+.me-2 {
+    margin-right: 0.5rem !important;
 }

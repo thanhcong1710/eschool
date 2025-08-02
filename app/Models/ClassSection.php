@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\CachingService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,9 +15,14 @@ class ClassSection extends Model {
 
     protected $fillable = ['class_id', 'section_id', 'class_teacher_id', 'school_id', 'medium_id'];
     protected $appends = ['name', 'full_name'];
+    protected $hidden = ['created_at','updated_at'];
 
     public function class() {
         return $this->belongsTo(ClassSchool::class)->withTrashed();
+    }
+    
+    public function shift() {
+        return $this->belongsTo(Shift::class)->withTrashed();
     }
 
     public function section() {
@@ -73,13 +79,18 @@ class ClassSection extends Model {
 
 
     public function scopeOwner($query) {
-        if (Auth::user()->school_id) {
+        if (Auth::user() && Auth::user()->school_id) {
             if (Auth::user()->hasRole('School Admin')) {
                 return $query->where('school_id', Auth::user()->school_id);
             }
 
             if (Auth::user()->hasRole('Teacher')) {
-                $subjectTeacher = SubjectTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id');
+                // $subjectTeacher = SubjectTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id');
+                $currentSemester = app(CachingService::class)->getDefaultSemesterData();
+                $subjectTeacher = SubjectTeacher::where('teacher_id', Auth::user()->id)->whereHas('class_subject', function($q) use($currentSemester){
+                    (!empty($currentSemester)) ? $q->where('semester_id', $currentSemester->id)->orWhereNull('semester_id') : $q->orWhereNull('semester_id');
+                })->pluck('class_section_id');
+
                 $classTeacher = ClassTeacher::where('teacher_id', Auth::user()->id)->pluck('class_section_id');
                 return $query->whereIn('id', array_merge(array_merge($subjectTeacher->toArray(), $classTeacher->toArray())));
             }
@@ -89,7 +100,7 @@ class ClassSection extends Model {
             }
             return $query->where('school_id', Auth::user()->school_id);
         }
-        if (!Auth::user()->school_id) {
+        if (Auth::user() && !Auth::user()->school_id) {
             if (Auth::user()->hasRole('Super Admin')) {
                 return $query;
             }
@@ -128,6 +139,19 @@ class ClassSection extends Model {
         if ($this->relationLoaded('medium')) {
             $name .= ' - ' . $this->medium->name;
         }
+        if ($this->relationLoaded('class') && $this->class->relationLoaded('shift')) {
+            $name .= isset($this->class->shift->name) ? ' ( ' . $this->class->shift->name . ' ) ' : '';
+        }
         return $name;
+    }
+
+    /**
+     * Get the class_subject that owns the ClassSection
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function class_subject()
+    {
+        return $this->belongsTo(ClassSubject::class, 'class_id', 'class_id');
     }
 }

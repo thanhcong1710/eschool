@@ -12,7 +12,7 @@ class ExtraStudentData extends Model {
     use HasFactory;
     use SoftDeletes;
 
-    protected $table = 'extra_student_datas';
+    protected $table = 'extra_user_datas';
 
     protected $fillable = [
         'student_id',
@@ -24,15 +24,15 @@ class ExtraStudentData extends Model {
     protected $appends = ['file_url'];
 
     public function scopeOwner($query) {
-        if (Auth::user()->hasRole('Super Admin')) {
+        if (Auth::user() && Auth::user()->hasRole('Super Admin')) {
             return $query;
         }
 
-        if (Auth::user()->hasRole('School Admin')) {
+        if (Auth::user() &&Auth::user()->hasRole('School Admin')) {
             return $query->where('school_id', Auth::user()->school_id);
         }
 
-        if (Auth::user()->hasRole('Student')) {
+        if (Auth::user() && Auth::user()->hasRole('Student')) { 
             return $query->where('school_id', Auth::user()->school_id);
         }
 

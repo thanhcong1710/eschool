@@ -17,7 +17,7 @@
                     <div class="card-body">
                         <form class="pt-3 section-create-form" id="create-form" action="{{ route('leave-master.store') }}" method="POST" novalidate="novalidate">
                             <div class="row">
-                                <div class="form-group col-sm-12 col-md-3">
+                                <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('total_leaves_per_month') }} <span class="text-danger">*</span></label>
                                     <input name="leaves" type="number" min="0" max="30" placeholder="{{ __('total_leaves_per_month') }}" class="form-control" required/>
                                 </div>
@@ -27,16 +27,13 @@
                                     {!! Form::select('holiday_days[]', ["Sunday" => "Sunday", "Monday" => "Monday", "Tuesday" => "Tuesday", "Wednesday" => "Wednesday", "Thursday" => "Thursday", "Friday" => "Friday", "Saturday" => "Saturday"], $settings['holiday_days'] ?? '', ['required','class' => 'form-control select2-dropdown select2-hidden-accessible','multiple']) !!}
                                 </div>
 
-                                <div class="form-group col-sm-12 col-md-3">
+                                <div class="form-group col-sm-12 col-md-4">
                                     <label for="">{{ __('session_year') }} <span class="text-danger">*</span></label>
                                     {!! Form::select('session_year_id', $sessionYear, null, ['required','class' => 'form-control', 'placeholder' => __('session_year')]) !!}
                                 </div>
-
-                                <div class="form-group col-sm-12 col-md-2 mt-4">
-                                    <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
-                                </div>
                             </div>
-                            
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -52,7 +49,7 @@
                                data-click-to-select="true" data-side-pagination="server"
                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
                                data-search="true" data-toolbar="#toolbar" data-show-columns="true"
-                               data-show-refresh="true" data-fixed-columns="true" data-fixed-number="2"
+                               data-show-refresh="true" data-fixed-columns="false" data-fixed-number="2"
                                data-fixed-right-number="1" data-trim-on-search="false"
                                data-mobile-responsive="true" data-sort-name="id"
                                data-sort-order="desc" data-maintain-selected="true"

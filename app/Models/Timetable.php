@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Repositories\Semester\SemesterInterface;
+use App\Services\CachingService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -22,6 +23,7 @@ class Timetable extends Model {
     ];
 
     protected $appends = ['title'];
+    protected $hidden = ['created_at','updated_at'];
 
     public function subject_teacher() {
         return $this->belongsTo(SubjectTeacher::class);
@@ -40,18 +42,27 @@ class Timetable extends Model {
     }
 
     public function scopeOwner($query) {
-        $user = Auth::user();
-        if ($user->hasRole('School Admin')) {
-            return $this->where('school_id', $user->school_id);
-        }
+        if (Auth::user()) {
+            $user = Auth::user();
+            if ($user->hasRole('School Admin')) {
+                $cache = app(CachingService::class);
+                $query->with(['session_years_trackings' => function ($q) use ($cache) {
+                    $q->where('session_year_id', $cache->getDefaultSessionYear()->id);
+                }]);
+                return $this->where('school_id', $user->school_id);
+            }
 
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    //        if ($user->hasRole('Teacher')) {
+    //            $teacher_id = $user->teacher()->pluck('id');
+    //            return $query->whereIn('teacher_id', $teacher_id);
+    //        }
+            if (Auth::user()->school_id) {
+                return $this->where('school_id', $user->school_id);
+            }
         }
-//        if ($user->hasRole('Teacher')) {
-//            $teacher_id = $user->teacher()->pluck('id');
-//            return $query->whereIn('teacher_id', $teacher_id);
-//        }
         return $query;
     }
 
@@ -62,7 +73,7 @@ class Timetable extends Model {
                     return $this->note;
                 }
                 $teacherName = $this->teacher->full_name ?? '';
-                return $this->subject->name . ' - ' . $teacherName;
+                return $this->subject->name . ' ( ' .$this->subject->type . ' ) ' . ' - ' . $teacherName;
             }
 
             if ($this->relationLoaded('subject')) {

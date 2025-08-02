@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\TimetableCollection;
 use App\Http\Resources\UserDataResource;
 use App\Models\AssignmentSubmission;
+use App\Models\School;
+use App\Models\User;
 use App\Repositories\Announcement\AnnouncementInterface;
 use App\Repositories\Assignment\AssignmentInterface;
 use App\Repositories\AssignmentSubmission\AssignmentSubmissionInterface;
@@ -27,12 +29,15 @@ use App\Repositories\SubjectTeacher\SubjectTeacherInterface;
 use App\Repositories\Timetable\TimetableInterface;
 use App\Repositories\Topics\TopicsInterface;
 use App\Repositories\User\UserInterface;
+use App\Rules\MaxFileSize;
 use App\Services\CachingService;
 use App\Services\FeaturesService;
 use App\Services\ResponseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use JetBrains\PhpStorm\NoReturn;
@@ -92,18 +97,51 @@ class StudentApiController extends Controller {
 
     #[NoReturn] public function login(Request $request) {
         $validator = Validator::make($request->all(), [
-            'gr_number' => 'required', 'password' => 'required',
+            'gr_number' => 'required',
+            'password' => 'required',
+            'school_code' => 'required|alpha_num',
+        ], [
+            'gr_number.required' => 'The GR number is required.',
+            'password.required' => 'The password is required.',
+            'school_code.required' => 'The school code is required.',
+            'school_code.alpha_num' => 'The school code must contain only letters and numbers.',
         ]);
 
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
+
+        $school = School::on('mysql')->where('code',$request->school_code)->first();
+
+        if ($school) {
+            DB::setDefaultConnection('school');
+            Config::set('database.connections.school.database', $school->database_name);
+            DB::purge('school');
+            DB::connection('school')->reconnect();
+            DB::setDefaultConnection('school');
+        } else {
+            ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+        }
+
+        $user = User::withTrashed()
+        ->where('email', $request->gr_number)
+        ->first();
+
+        if ($user && Hash::check($request->password, $user->password)) {
+            if ($user->trashed()) {
+                // User is soft-deleted, handle accordingly
+                ResponseService::errorResponse(trans('your_account_has_been_deactivated_please_contact_admin'), null, config('constants.RESPONSE_CODE.INACTIVATED_USER'));
+            }
+        }
+
         if (Auth::attempt(['email' => $request->gr_number, 'password' => $request->password, 'status' => 1])) {
             //Here Email Field is referenced as a GR Number for Student
             $auth = Auth::user();
-            if (!$auth->hasRole('Student')) {
-                ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
-            }
+            // Check role
+            // $auth->assignRole('Student');
+            // if (!$auth->hasRole('Student')) {
+            //     ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
+            // }
             // Check school status is activated or not
             if ($auth->school->status == 0) {
                 ResponseService::errorResponse('Your account has been deactivated', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
@@ -113,11 +151,16 @@ class StudentApiController extends Controller {
                 $q->with('section', 'class', 'medium');
             }, 'student.guardian', 'school']);
 
+            // child.user', 'child.class_section.class', 'child.class_section.section', 'child.class_section.medium', 'child.user.school
+            // $user = $auth->load(['student.guardian.child' => function($q) {
+            //     $q->with('user.school','class_section.class','class_section.section', 'class_section.medium');
+            // }]);
+
             if ($request->fcm_id) {
                 $auth->fcm_id = $request->fcm_id;
                 $auth->save();
             }
-            ResponseService::successResponse('User logged-in!', new UserDataResource($user), ['token' => $token]);
+            ResponseService::successResponse('User logged-in!', new UserDataResource($user), ['error' => false, 'token' => $token]);
         }
         ResponseService::errorResponse('Invalid Login Credentials', null, config('constants.RESPONSE_CODE.INVALID_LOGIN'));
     }
@@ -126,24 +169,42 @@ class StudentApiController extends Controller {
         $validator = Validator::make($request->all(), [
             'gr_no' => 'required',
             'dob'   => 'required|date',
+            'school_code' => 'required'
         ]);
 
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            $user = $this->user->builder()->whereHas('student', function ($query) use ($request) {
-                $query->where('admission_no', $request->gr_no);
-            })->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)))->first();
+            $schoolCode = $request->school_code;
+            if ($schoolCode) {
+                $school = School::on('mysql')->where('code',$schoolCode)->first();
 
-            if ($user) {
-                /*NOTE : Revert this if needed */
-                //$this->user->update($user->id, ['reset_request' => 1,'school_id' => $user->school_id]);
-                $this->user->update($user->id, ['reset_request' => 1, 'school_id' => $user->school_id]);
-                ResponseService::successResponse("Request Send Successfully");
+                if ($school) {
+                    DB::setDefaultConnection('school');
+                    Config::set('database.connections.school.database', $school->database_name);
+                    DB::purge('school');
+                    DB::connection('school')->reconnect();
+                    DB::setDefaultConnection('school');
+                
+                    $user = $this->user->builder()->whereHas('student', function ($query) use ($request) {
+                        $query->where('admission_no', $request->gr_no);
+                    })->whereDate('dob', '=', date('Y-m-d', strtotime($request->dob)))->first();
+        
+                    if ($user) {
+                        /*NOTE : Revert this if needed */
+                        //$this->user->update($user->id, ['reset_request' => 1,'school_id' => $user->school_id]);
+                        $this->user->update($user->id, ['reset_request' => 1, 'school_id' => $user->school_id]);
+                        ResponseService::successResponse("Request Send Successfully");
+                    } else {
+                        ResponseService::errorResponse("Invalid user Details", null, config('constants.RESPONSE_CODE.INVALID_USER_DETAILS'));
+                    }
+                } else {
+                    return response()->json(['message' => 'Invalid school code'], 400);
+                }
             } else {
-                ResponseService::errorResponse("Invalid user Details", null, config('constants.RESPONSE_CODE.INVALID_USER_DETAILS'));
-            }
+                return response()->json(['message' => 'Unauthenticated'], 400);
+            }   
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);
             ResponseService::errorResponse();
@@ -229,8 +290,34 @@ class StudentApiController extends Controller {
     public function getTimetable(Request $request) {
         try {
             $student = $request->user()->student;
-            $timetable = $this->timetable->builder()->where('class_section_id', $student->class_section_id)->with('subject_teacher.subject:id,name,type,code,bg_color,image', 'subject_teacher.teacher:id,first_name,last_name')->orderBy('day')->orderBy('start_time')->get();
-            ResponseService::successResponse("Timetable Fetched Successfully", new TimetableCollection($timetable));
+            $studentSubjects = $student->currentSemesterSubjects();
+           
+            $core_subjects = $studentSubjects["core_subject"]->pluck('id')->toArray();
+
+            $elective_subjects = $studentSubjects["elective_subject"] ?? [];
+           
+            if ($elective_subjects) {
+                $elective_subjects = $elective_subjects->pluck('class_subject.subject.id')->toArray();
+            }
+
+            $subjectIds = array_merge($core_subjects, $elective_subjects);
+
+            $timetable = $this->timetable->builder()
+                ->where('class_section_id', $student->class_section_id)->where('day',"Tuesday")
+                ->where(function($query) use ($subjectIds) {
+                    $query->whereHas('subject_teacher', function($q) use ($subjectIds) {
+                        $q->whereIn('subject_id', $subjectIds);
+                    })
+                    ->orWhereDoesntHave('subject_teacher');
+                })
+                ->with([
+                    'subject_teacher.subject:id,name,type,code,bg_color,image',
+                    'subject_teacher.teacher:id,first_name,last_name'
+                ])
+                ->orderBy('start_time')
+                ->get();
+
+                ResponseService::successResponse("Timetable Fetched Successfully", new TimetableCollection($timetable));
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);
             ResponseService::errorResponse();
@@ -326,11 +413,16 @@ class StudentApiController extends Controller {
     }
 
     public function submitAssignment(Request $request) {
+        $file_upload_size_limit = $this->cache->getSystemSettings('file_upload_size_limit');
         $validator = Validator::make($request->all(), [
             'assignment_id' => 'required|numeric',
             'subject_id'    => 'nullable|numeric',
             'files'         => 'required|array',
-            'files.*'       => 'mimes:jpeg,png,jpg,gif,svg,webp,pdf,doc,docx,xml',
+            'files.*'       => ['mimes:jpeg,png,jpg,gif,svg,webp,pdf,doc,docx,xml', new MaxFileSize($file_upload_size_limit) ]
+        ],[
+            'files.*' => trans('The file Uploaded must be less than :file_upload_size_limit MB.', [
+                'file_upload_size_limit' => $file_upload_size_limit,  
+            ]),
         ]);
 
         if ($validator->fails()) {
@@ -361,13 +453,12 @@ class StudentApiController extends Controller {
                 // Check Old Files and Delete it
                 if ($assignmentSubmissionQuery->file) {
                     foreach ($assignmentSubmissionQuery->file as $file) {
-                        if (Storage::disk('public')->exists($file->file_url)) {
-                            Storage::disk('public')->delete($file->file_url);
+                        if (Storage::disk('public')->exists($file->getRawOriginal('file_url'))) {
+                            Storage::disk('public')->delete($file->getRawOriginal('file_url'));
                         }
                     }
                 }
-                // TODO : There might be some issue here
-                $assignment_submission->file()->delete();
+                $assignmentSubmissionQuery->file()->delete();
             } else {
                 ResponseService::errorResponse("You already have submitted your assignment.", null, config('constants.RESPONSE_CODE.ASSIGNMENT_ALREADY_SUBMITTED'));
             }
@@ -625,7 +716,12 @@ class StudentApiController extends Controller {
                 'exam.timetable:id,exam_id,start_time,end_time',
                 'session_year',
                 'exam.marks' => function ($q) use ($studentData) {
-                    $q->where('student_id', $studentData->user_id);
+                    $q->where('student_id', $studentData->user_id)
+                    ->with(['class_subject' => function($q) {
+                        $q->withTrashed()->with(['subject' => function($q) {
+                            $q->withTrashed();
+                        }]);
+                    }]);
                 }
             ])->where('student_id', $studentData->user_id)->get();
 
@@ -653,6 +749,7 @@ class StudentApiController extends Controller {
                             'subject_name'   => $marks->class_subject->subject->name,
                             'subject_type'   => $marks->class_subject->subject->type,
                             'total_marks'    => $marks->timetable->total_marks,
+                            'passing_marks'    => $marks->timetable->passing_marks,
                             'obtained_marks' => $marks->obtained_marks,
                             'teacher_review' => $marks->teacher_review,
                             'grade'          => $marks->grade,
@@ -765,7 +862,7 @@ class StudentApiController extends Controller {
                 ->when($request->class_subject_id, function ($query, $classSubjectId) {
                     return $query->where('class_subject_id', $classSubjectId);
                 })
-                ->orderby('start_date')
+                ->orderBy('start_date', 'desc')
                 ->paginate(15);
 
             ResponseService::successResponse('Data Fetched Successfully', $onlineExamData);
@@ -858,7 +955,7 @@ class StudentApiController extends Controller {
     public function submitOnlineExamAnswers(Request $request) {
         $validator = Validator::make($request->all(), [
             'online_exam_id' => 'required|numeric',
-            'answers_data'   => 'present|array',
+            'answers_data'   => 'nullable|array',
             //            'answers_data.*.question_id'    => 'required|numeric',
         ]);
 
@@ -875,12 +972,10 @@ class StudentApiController extends Controller {
 //                ResponseService::errorResponse('Invalid online exam id');
 //            }
 
-            // Check if answers already submitted
-            if ($this->onlineExamStudentAnswer->builder()->where(['student_id' => $student->id, 'online_exam_id' => $request->online_exam_id])->exists()) {
-                ResponseService::errorResponse('Answers already submitted');
-            }
+            // Clean existing answers for fresh submission
+            $this->onlineExamStudentAnswer->builder()->where(['student_id' => $student->user_id, 'online_exam_id' => $request->online_exam_id])->delete();
             $answers = [];
-            foreach ($request->answers_data as $answerData) {
+            foreach ($request->answers_data ?? [] as $answerData) {
 
                 // checks the question exists with provided exam id
                 $questionChoice = $this->onlineExamQuestionChoice->findById($answerData['question_id']);
@@ -888,12 +983,10 @@ class StudentApiController extends Controller {
                     ResponseService::errorResponse('Invalid question id');
                 }
 
-                foreach ($answerData['option_id'] as $optionId) {
-                    // checks the option exists with provided question
-//                    if (!$this->onlineExamQuestionOption->findById($optionId)->exists()) {
-//                        ResponseService::errorResponse('Invalid option id');
-//                    }
+                // Remove duplicates from submitted options for this question
+                $uniqueOptionIds = array_unique($answerData['option_id']);
 
+                foreach ($uniqueOptionIds as $optionId) {
                     // add the data of answers
                     $answers[] = [
                         'student_id'     => $student->user_id,
@@ -904,6 +997,14 @@ class StudentApiController extends Controller {
                     ];
                 }
             }
+
+            // Debug: Log what we're about to store
+            \Log::info('About to store answers:', [
+                'exam_id' => $request->online_exam_id,
+                'student_id' => $student->user_id,
+                'answers_count' => count($answers),
+                'answers' => $answers
+            ]);
             if (count($answers) > 0) {
                 $this->onlineExamStudentAnswer->createBulk($answers);
             }
@@ -945,6 +1046,7 @@ class StudentApiController extends Controller {
                     $q->where('student_id', $student->user_id);
                 })
                 ->with('question_choice:id,online_exam_id,marks', 'student_answers.user_submitted_questions.questions:id', 'student_answers.user_submitted_questions.questions.options:id,question_id,is_answer', 'class_subject.subject:id,name,type,code,bg_color,image')
+                ->orderBy('id', 'desc')
                 ->paginate(15)->toArray();
 
             $examListData = array(); // Initialized Empty examListData Array
@@ -1028,17 +1130,30 @@ class StudentApiController extends Controller {
             $student = Auth::user()->student;
 
             // Online Exam Data
+            // $onlineExam = $this->onlineExam->builder()
+            //     ->where('id', $request->online_exam_id)
+            //     ->whereHas('student_attempt', function ($q) use ($student) {
+            //         $q->where('student_id', $student->user_id);
+            //     })
+            //     ->with([
+            //         'question_choice:id,online_exam_id,marks',
+            //         'student_answers.user_submitted_questions.questions:id',
+            //         'student_answers.user_submitted_questions.questions.options:id,question_id,is_answer',
+            //     ])
+            //     ->first();
+                
             $onlineExam = $this->onlineExam->builder()
                 ->where('id', $request->online_exam_id)
                 ->whereHas('student_attempt', function ($q) use ($student) {
                     $q->where('student_id', $student->user_id);
                 })
-                ->with([
-                    'question_choice:id,online_exam_id,marks',
-                    'student_answers.user_submitted_questions.questions:id',
-                    'student_answers.user_submitted_questions.questions.options:id,question_id,is_answer',
-                ])
+                ->with([ 'question_choice:id,online_exam_id,marks' ])
+                ->with(['student_answers' => function($q) {
+                    $q->where('student_id', Auth::user()->id)
+                    ->with('user_submitted_questions.questions:id','user_submitted_questions.questions.options:id,question_id,is_answer');
+                }])
                 ->first();
+            
             if (isset($onlineExam) && $onlineExam != null) {
 
                 //Get Total Question Count and Total Marks
@@ -1193,8 +1308,14 @@ class StudentApiController extends Controller {
                         // Get Student's Correct Options
                         $student_option_ids = array_column($student_answers, 'option_id');
 
+                        // Convert to integers and sort for proper comparison
+                        $correct_option_ids = array_map('intval', $correct_option_ids);
+                        $student_option_ids = array_map('intval', $student_option_ids);
+                        sort($correct_option_ids);
+                        sort($student_option_ids);
+
                         // Check if the student's answers exactly match the correct answers then add marks with totalObtainedMarks
-                        if (!array_diff($correct_option_ids, $student_option_ids) && !array_diff($student_option_ids, $correct_option_ids)) {
+                        if ($correct_option_ids === $student_option_ids) {
                             $totalObtainedMarks += $student_answers[0]['user_submitted_questions']['marks'];
                         }
                     }
@@ -1323,18 +1444,24 @@ class StudentApiController extends Controller {
 
     public function getSchoolSettings() {
         try {
-            $settings = $this->cache->getSchoolSettings();
-            $sessionYear = $this->cache->getDefaultSessionYear();
-            $semester = $this->cache->getDefaultSemesterData();
-            $features = FeaturesService::getFeatures();
-            $data = [
-                'school_id'    => Auth::user()->school_id,
-                'session_year' => $sessionYear,
-                'semester'     => $semester,
-                'settings'     => $settings,
-                'features'     => (count($features) > 0) ? $features : (object)[]
-            ];
-            ResponseService::successResponse('Settings Fetched Successfully.', $data);
+            if (Auth::user()) {
+                $settings = $this->cache->getSchoolSettings();
+                $sessionYear = $this->cache->getDefaultSessionYear();
+                $semester = $this->cache->getDefaultSemesterData();
+                $features = FeaturesService::getFeatures();
+                $data = [
+                    'school_id'    => Auth::user()->school_id,
+                    'session_year' => $sessionYear,
+                    'semester'     => $semester,
+                    'settings'     => $settings,
+                    'features'     => (count($features) > 0) ? $features : (object)[]
+                ];
+                ResponseService::successResponse('Settings Fetched Successfully.', $data);    
+            } else {
+                ResponseService::errorResponse(trans('your_account_has_been_deactivated_please_contact_admin'), null, config('constants.RESPONSE_CODE.INACTIVATED_USER'));
+            }
+            
+            
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);
             ResponseService::errorResponse();
@@ -1344,7 +1471,7 @@ class StudentApiController extends Controller {
     public function getSliders() {
         try {
             $studentData = Auth::user();
-            $data = $this->sliders->builder()->where('school_id', $studentData->school_id)->get();
+            $data = $this->sliders->builder()->where('school_id', $studentData->school_id)->whereIn('type',[1,3])->get();
             ResponseService::successResponse("Sliders Fetched Successfully", $data);
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e);

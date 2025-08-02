@@ -20,35 +20,43 @@
                         </h4>
                         <form class="pt-3 add-topic-form" id="create-form" data-success-function="formSuccessFunction" action="{{ route('lesson-topic.store') }}" method="POST" novalidate="novalidate">
                             <div class="row">
+                                {!! Form::hidden('user_id', Auth::user()->id, ['id' => 'user_id']) !!}
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('Class Section') }} <span class="text-danger">*</span></label>
-                                    <select name="class_section_id" id="class-section-id" class="class_section_id form-control">
-                                        <option value="">{{ __('Select Class Section') }}</option>
+                                    <select name="class_section_id[]" id="class-section-id" class="class_section_id form-control select2-dropdown select2-hidden-accessible" multiple>
+                                        {{-- <option value="">{{ __('Select Class Section') }}</option> --}}
                                         @foreach ($class_section as $section)
                                             <option value="{{ $section->id }}" data-class="{{ $section->class->id }}">
                                                 {{ $section->full_name }}
                                             </option>
                                         @endforeach
                                     </select>
+                                    <div class="form-check w-fit-content">
+                                        <label class="form-check-label user-select-none">
+                                            <input type="checkbox" class="form-check-input" id="select-all" value="1">{{__("Select All")}}
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('subject') }} <span class="text-danger">*</span></label>
-                                    <select name="class_subject_id" id="subject-id" class="form-control">
+                                    <select name="subject_id" id="subject-id" class="form-control">
                                         <option value="">-- {{ __('Select Subject') }} --</option>
                                         <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
                                         @foreach ($subjectTeachers as $item)
-                                            <option value="{{ $item->class_subject_id }}" data-class-section="{{ $item->class_section_id }}">{{ $item->subject_with_name}}</option>
+                                            <option value="{{ $item->subject_id }}" data-class-section="{{ $item->class_section_id }}" data-user="{{ Auth::user()->id }}">{{ $item->subject_with_name}}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('lesson') }} <span class="text-danger">*</span></label>
-                                    <select name="lesson_id" id="topic-lesson-id" class="form-control">
+                                    <select name="lesson_id" id="topic-lesson-id" class="form-control topic-lesson-id">
                                         <option value="">-- {{ __('lesson') }} --</option>
                                         <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
                                         @foreach ($lessons as $item)
-                                            <option value="{{ $item->id }}" data-class-section="{{ $item->class_section_id }}" data-subject="{{ $item->class_subject_id }}">{{ $item->name}}</option>
+                                            @foreach ($item->lesson_commons as $common)
+                                                <option value="{{ $item->id }}" data-class-section="{{ $common->class_section_id }}" data-subject="{{ $common->class_subject->subject_id }}">{{ $item->name}}</option>
+                                            @endforeach
                                         @endforeach
                                     </select>
                                 </div>
@@ -77,6 +85,7 @@
                                                 <option value="file_upload">{{ __('file_upload') }}</option>
                                                 <option value="youtube_link">{{ __('youtube_link') }}</option>
                                                 <option value="video_upload">{{ __('video_upload') }}</option>
+                                                <option value="other_link">{{ __('other_link') }}</option>
                                             </select>
                                         </div>
                                         <div class="form-group col-xl-3" id="file_name_div" style="display: none">
@@ -109,7 +118,8 @@
                                     </button>
                                 </div>
                             </div>
-                            <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -140,21 +150,32 @@
                                         <option value="" data-all="true">{{ __('all') }}</option>
                                         <option value="data-not-found" style="display: none">-- {{ __('no_data_found') }} --</option>
                                         @foreach ($subjectTeachers as $item)
-                                            <option value="{{ $item->class_subject_id }}" data-class-section="{{ $item->class_section_id }}">{{ $item->subject_with_name}}</option>
+                                            <option value="{{ $item->subject_id }}" data-class-section="{{ $item->class_section_id }}" data-user="{{ Auth::user()->id }}">{{ $item->subject_with_name}}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-3">
-                                    <label for="filter_lesson_id" class="filter-menu">{{__("Lessons")}}</label>
-                                    <select name="filter_lesson_id" id="filter_lesson_id" class="form-control">
-                                        <option value="">{{ __('all') }}</option>
-                                        @foreach ($lessons as $lesson)
-                                            <option value="{{ $lesson->id }}">
-                                                {{ $lesson->name }}
-                                            </option>
+                                    <label for="lesson_id" class="filter-menu">{{__("Lessons")}}</label>
+                                    <select name="lesson_id" id="filter-lesson-id" class="form-control topic-lesson-id">
+                                        <option value="">-- {{ __('lesson') }} --</option>
+                                        @foreach ($lessons as $item)
+                                            @foreach ($item->lesson_commons as $common)
+                                                <option value="{{ $item->id }}" data-class-section="{{ $common->class_section_id }}" data-subject="{{ $common->class_subject->subject_id }}">{{ $item->name}}</option>
+                                            @endforeach
                                         @endforeach
                                     </select>
                                 </div>
+                                @if($semesters->count() > 0)
+                                    <div class="form-group col-sm-12 col-md-3">
+                                        <label for="filter-semester-id" class="filter-menu">{{ __('Semester') }}</label>
+                                        <select name="filter-semester-id" id="filter-semester-id" class="form-control">
+                                            <option value="">{{ __('all') }}</option>
+                                            @foreach ($semesters as $semester)
+                                                <option value="{{ $semester->id }}">{{ $semester->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
                             </div>
 
                         </div>
@@ -174,12 +195,12 @@
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="name" data-sortable="false">{{ __('name') }}</th>
                                 <th scope="col" data-events="tableDescriptionEvents" data-formatter="descriptionFormatter" data-field="description" data-sortable="false"> {{ __('description') }}</th>
-                                <th scope="col" data-field="lesson.class_section.full_name" data-sortable="false"> {{ __('class_section') }}</th>
+                                <th scope="col" data-field="class_section_with_medium" data-formatter="ClassSectionFormatter" data-sortable="false"> {{ __('class_section') }}</th>
                                 <th scope="col" data-field="lesson.class_subject.subject.name_with_type" data-sortable="false"> {{ __('subject') }}</th>
                                 <th scope="col" data-field="lesson.name" data-sortable="false"> {{ __('lesson') }}</th>
                                 <th scope="col" data-field="file" data-formatter="fileFormatter" data-sortable="false">{{ __('file') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="false" data-visible="false"> {{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="false" data-visible="false"> {{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false"> {{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false"> {{ __('updated_at') }}</th>
                                 <th scope="col" data-events="lessonTopicEvents" data-field="operate" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>

@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Feature;
+use App\Models\SubscriptionFeature;
 use App\Repositories\Feature\FeatureInterface;
 use App\Repositories\Package\PackageInterface;
 use App\Repositories\PackageFeature\PackageFeatureInterface;
+use App\Repositories\Subscription\SubscriptionInterface;
+use App\Repositories\SubscriptionFeature\SubscriptionFeatureInterface;
 use App\Services\BootstrapTableService;
 use App\Services\ResponseService;
 use Carbon\Carbon;
@@ -16,40 +19,53 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
-class PackageController extends Controller {
+class PackageController extends Controller
+{
 
     private PackageInterface $package;
     private FeatureInterface $feature;
     private PackageFeatureInterface $packageFeature;
+    private SubscriptionInterface $subscription;
+    private SubscriptionFeatureInterface $subscriptionFeature;
 
-    public function __construct(PackageInterface $package, FeatureInterface $feature, PackageFeatureInterface $packageFeature) {
+    public function __construct(PackageInterface $package, FeatureInterface $feature, PackageFeatureInterface $packageFeature, SubscriptionInterface $subscription, SubscriptionFeatureInterface $subscriptionFeature)
+    {
         $this->package = $package;
         $this->feature = $feature;
         $this->packageFeature = $packageFeature;
+        $this->subscription = $subscription;
+        $this->subscriptionFeature = $subscriptionFeature;
     }
 
 
-    public function index() {
+    public function index()
+    {
         ResponseService::noPermissionThenRedirect('package-list');
         return view('package.index');
     }
 
 
-    public function create() {
+    public function create()
+    {
         ResponseService::noPermissionThenRedirect('package-create');
-        $features = $this->feature->builder()->orderBy('is_default', 'DESC')->get();
-        return view('package.create', compact('features'));
+        $features = $this->feature->builder()->activeFeatures()->orderBy('is_default', 'DESC')->orderBy('name', 'ASC')->get();
+        $vps_features = $this->feature->builder()->where('required_vps', 1)->get();
+        return view('package.create', compact('features', 'vps_features'));
     }
 
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         ResponseService::noPermissionThenRedirect('package-create');
         $validator = Validator::make($request->all(), [
             'name'           => 'required',
-            'student_charge' => 'required|numeric|decimal:0,2',
-            'staff_charge'   => 'required|numeric|decimal:0,2',
-            'feature_id'     => 'required'
-
+            'student_charge' => 'required_if:type,1|nullable|numeric|decimal:0,2',
+            'staff_charge'   => 'required_if:type,1|nullable|numeric|decimal:0,2',
+            'feature_id'     => 'required',
+            'days'           => 'required|numeric',
+            'no_of_students' => 'required_if:type,0|nullable|numeric|decimal:0,2',
+            'no_of_staffs'   => 'required_if:type,0|nullable|numeric|decimal:0,2',
+            'charges'        => 'required_if:type,0|nullable|numeric|decimal:0,2',
 
         ], [
             'feature_id.required' => trans('please_select_at_least_one_feature')
@@ -57,6 +73,14 @@ class PackageController extends Controller {
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
+
+        $request['student_charge'] = $request->student_charge ?? 0;
+        $request['staff_charge'] = $request->staff_charge ?? 0;
+
+        $request['no_of_students'] = $request->no_of_students ?? 0;
+        $request['no_of_staffs'] = $request->no_of_staffs ?? 0;
+        $request['charges'] = $request->charges ?? 0;
+
         try {
             DB::beginTransaction();
             $packageData = [
@@ -85,7 +109,8 @@ class PackageController extends Controller {
     }
 
 
-    public function show() {
+    public function show()
+    {
         ResponseService::noPermissionThenRedirect('package-list');
         $offset = request('offset', 0);
         $limit = request('limit', 10);
@@ -93,23 +118,28 @@ class PackageController extends Controller {
         $order = request('order', 'ASC');
         $search = request('search');
         $showDeleted = request('show_deleted');
+        $type = request('type');
         $today_date = Carbon::now()->format('Y-m-d');
 
-        $sql = $this->package->builder()->with('package_feature.feature')->where('is_trial',0)
-        ->withCount(['subscription' => function ($q) use ($today_date) {
-            $q->whereDate('start_date', '<=', $today_date)->whereDate('end_date', '>=', $today_date);
-        }])
+        $sql = $this->package->builder()->with('package_feature.feature')->where('is_trial', 0)
+            ->withCount(['subscription' => function ($q) use ($today_date) {
+                $q->whereDate('start_date', '<=', $today_date)->whereDate('end_date', '>=', $today_date);
+            }])
             ->where(function ($query) use ($search) {
                 $query->when($search, function ($query) use ($search) {
-                $query->where(function ($query) use ($search) {
-                    $query->where('name', 'LIKE', "%$search%")
-                        ->orWhere('description', 'LIKE', "%$search%")
-                        ->orWhere('tagline', 'LIKE', "%$search%");
-                });
+                    $query->where(function ($query) use ($search) {
+                        $query->where('name', 'LIKE', "%$search%")
+                            ->orWhere('description', 'LIKE', "%$search%")
+                            ->orWhere('tagline', 'LIKE', "%$search%");
+                    });
                 });
             })->when(!empty($showDeleted), function ($q) {
                 $q->onlyTrashed();
             });
+
+        if (isset($type)) {
+            $sql->where('type', $type);
+        }
 
 
         $total = $sql->count();
@@ -149,31 +179,64 @@ class PackageController extends Controller {
     }
 
 
-    public function edit($id) {
+    public function edit($id)
+    {
         ResponseService::noPermissionThenRedirect('package-edit');
         $package = $this->package->findById($id);
-        $features = $this->feature->builder()->orderBy('is_default', 'DESC')->get();
-
-        return view('package.edit', compact('package', 'features'));
+        $features = $this->feature->builder()->activeFeatures()->orderBy('is_default', 'DESC')->orderBy('name', 'ASC')->get();
+        $vps_features = $this->feature->builder()->where('required_vps', 1)->get();
+        return view('package.edit', compact('package', 'features', 'vps_features'));
     }
 
-    public function update(Request $request, $id) {
+    public function update(Request $request, $id)
+    {
         ResponseService::noPermissionThenSendJson('package-edit');
         $validator = Validator::make($request->all(), [
             'name'           => 'required',
-            'student_charge' => 'required|numeric|decimal:0,2',
-            'staff_charge'   => 'required|numeric|decimal:0,2',
-            'feature_id'     => 'required'
-
-
+            'student_charge' => 'required_if:type,1|nullable|numeric|decimal:0,2',
+            'staff_charge'   => 'required_if:type,1|nullable|numeric|decimal:0,2',
+            'feature_id'     => 'required',
+            'days'           => 'required|numeric',
+            'no_of_students' => 'required_if:type,0|nullable|numeric|decimal:0,2',
+            'no_of_staffs'   => 'required_if:type,0|nullable|numeric|decimal:0,2',
+            'charges'        => 'required_if:type,0|nullable|numeric|decimal:0,2',
         ], [
             'feature_id.required'   => trans('please_select_at_least_one_feature'),
         ]);
+
+
+
         if ($validator->fails()) {
             ResponseService::validationError($validator->errors()->first());
         }
+
         try {
             DB::beginTransaction();
+
+            // Instant effects features
+            if ($request->instant_effects) {
+                $today_date = Carbon::now()->format('Y-m-d');
+                // $subscriptions = $this->subscription->builder()->where('package_id',$id)->where('start_date','<=',$today_date)->where('end_date','>=',$today_date)->doesntHave('subscription_bill')->get();
+                $subscriptions = SubscriptionFeature::groupBy('subscription_id')->pluck('subscription_id');
+            }
+
+            // 0 => Prepaid, 1 => Postpaid
+            if ($request->type == 1) {
+                $request['student_charge'] = $request->student_charge ?? 0;
+                $request['staff_charge'] = $request->staff_charge ?? 0;
+
+                $request['no_of_students'] = 0;
+                $request['no_of_staffs'] = 0;
+                $request['charges'] = 0;
+            } else {
+                $request['student_charge'] = 0;
+                $request['staff_charge'] = 0;
+
+                $request['no_of_students'] = $request->no_of_students ?? 0;
+                $request['no_of_staffs'] = $request->no_of_staffs ?? 0;
+                $request['charges'] = $request->charges ?? 0;
+            }
+
             $packageData = [
                 ...$request->all(),
                 'highlight'                  => $request->highlight ?? 0,
@@ -182,6 +245,7 @@ class PackageController extends Controller {
             $package = $this->package->update($id, $packageData);
             $package_features = $package->package_feature->pluck('feature_id')->toArray();
             $packageFeatures = [];
+            $subscription_features = [];
             foreach ($request->feature_id as $feature) {
                 $packageFeatures[] = [
                     'package_id' => $id,
@@ -193,6 +257,22 @@ class PackageController extends Controller {
                 if ($key !== false) {
                     unset($package_features[$key]);
                 }
+
+                if ($request->instant_effects) {
+                    foreach ($subscriptions as $key => $subscription) {
+                        $subscription_features[] = [
+                            'subscription_id' => $subscription,
+                            'feature_id' => $feature
+                        ];
+                    }
+                }
+            }
+            if ($request->instant_effects) {
+                // Update features
+                $this->subscriptionFeature->upsert($subscription_features, ['subscription_id', 'feature_id'], ['subscription_id', 'feature_id']);
+                // Delete features
+                $delete_subscription_features = $subscriptions;
+                $this->subscriptionFeature->builder()->whereIn('subscription_id', $delete_subscription_features)->whereIn('feature_id', $package_features)->delete();
             }
             $this->packageFeature->upsert($packageFeatures, ['feature_id', 'package_id'], ['package_id', 'feature_id']);
 
@@ -209,7 +289,8 @@ class PackageController extends Controller {
         }
     }
 
-    public function destroy($id) {
+    public function destroy($id)
+    {
         //
         ResponseService::noPermissionThenSendJson('package-delete');
         try {
@@ -226,8 +307,9 @@ class PackageController extends Controller {
     }
 
 
-    public function status($id) {
-        ResponseService::noAnyPermissionThenSendJson(['package-create','package-edit']);
+    public function status($id)
+    {
+        ResponseService::noAnyPermissionThenSendJson(['package-create', 'package-edit']);
         try {
             DB::beginTransaction();
             $package = $this->package->findById($id);
@@ -243,7 +325,8 @@ class PackageController extends Controller {
     }
 
 
-    public function restore($id) {
+    public function restore($id)
+    {
         ResponseService::noPermissionThenSendJson('package-edit');
 
         try {
@@ -259,7 +342,8 @@ class PackageController extends Controller {
     }
 
 
-    public function trash($id) {
+    public function trash($id)
+    {
         ResponseService::noPermissionThenSendJson('package-delete');
         try {
             DB::beginTransaction();
@@ -316,7 +400,7 @@ class PackageController extends Controller {
     public function features_list()
     {
         if (!Auth::user()->hasRole('School Admin')) {
-            ResponseService::noAnyPermissionThenRedirect(['addons-list', 'addons-create', 'addons-edit', 'addons-delete', 'package-list', 'package-create', 'package-edit', 'package-delete']);    
+            ResponseService::noAnyPermissionThenRedirect(['addons-list', 'addons-create', 'addons-edit', 'addons-delete', 'package-list', 'package-create', 'package-edit', 'package-delete']);
         }
         return view('features');
     }
@@ -324,40 +408,91 @@ class PackageController extends Controller {
     public function features_show()
     {
         if (!Auth::user()->hasRole('School Admin')) {
-            ResponseService::noAnyPermissionThenRedirect(['addons-list', 'addons-create', 'addons-edit', 'addons-delete', 'package-list', 'package-create', 'package-edit', 'package-delete']);    
+            ResponseService::noAnyPermissionThenRedirect(['addons-list', 'addons-create', 'addons-edit', 'addons-delete', 'package-list', 'package-create', 'package-edit', 'package-delete']);
         }
-        
+
         $offset = request('offset', 0);
         $limit = request('limit', 10);
         $sort = request('sort', 'id');
         $order = request('order', 'ASC');
         $search = request('search');
 
-        $sql = Feature::when($search, static function ($query) use ($search) {
-            $query->where(function ($query) use ($search) {
-                $query->where('name', 'LIKE', "%$search%");
+        $sql = Feature::activeFeatures()->orderBy($sort, $order);
+
+        // Get all features as collection to handle array filtering in PHP
+        $features = $sql->get();
+
+        // Step 2: Filter features based on search term
+        if ($search) {
+            $features = $features->filter(function ($row) use ($search) {
+                $matchesPermission = false;
+
+                // Get permissions for each feature
+                $permissions = $this->features_permission($row->name);
+
+                // Search in feature name and permissions array
+                if (stripos($row->name, $search) !== false) {
+                    return true;
+                }
+
+                if (is_array($permissions)) {
+                    foreach ($permissions as $permission) {
+                        if (stripos($permission, $search) !== false) {
+                            $matchesPermission = true;
+                            break;
+                        }
+                    }
+                }
+
+                return $matchesPermission;
             });
-        });
+        }
 
+        // Step 3: Get the total number of filtered records
+        $total = $features->count();
 
-        $total = $sql->count();
-
-        $sql->orderBy($sort, $order)->skip($offset)->take($limit);
-        $res = $sql->get();
+        // Step 4: Paginate the filtered results
+        $features = $features->slice($offset, $limit);
 
         $bulkData = array();
         $bulkData['total'] = $total;
         $rows = array();
-        $no = 1;
-        foreach ($res as $row) {
+        $no = $offset + 1;
+
+        // Step 5: Prepare response data
+        foreach ($features as $row) {
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
             $tempRow['permission'] = $this->features_permission($row->name);
             $rows[] = $tempRow;
         }
-
         $bulkData['rows'] = $rows;
+        // Step 6: Return JSON response
         return response()->json($bulkData);
+    }
+
+    public function features_enable(Request $request)
+    {
+        ResponseService::noAnyPermissionThenRedirect(['package-edit', 'package-create']);
+        try {
+            DB::beginTransaction();
+            $update = [];
+            foreach ($request->feature_id as $key => $value) {
+
+                $update[] = [
+                    'id' => $key,
+                    'status' => $value
+                ];
+            }
+
+            $this->feature->upsert($update, ['id'], ['status']);
+            DB::commit();
+            ResponseService::successResponse('Data Updated Successfully');
+        } catch (Throwable $e) {
+            DB::rollBack();
+            ResponseService::logErrorResponse($e, 'Package Controller ->Enable Features method');
+            ResponseService::errorResponse();
+        }
     }
 
     public function features_permission($feature = null)
@@ -383,10 +518,11 @@ class PackageController extends Controller {
                 "Promote Student"
             ),
             "Slider Management" => array(
-                "Manage Slider"
+                "Manage Slider for App & Web"
             ),
             "Teacher Management" => array(
-                "Manage Teacher"
+                "Manage Teacher",
+                "Bulk Upload"
             ),
             "Session Year Management" => array(
                 "Manage Session Year"
@@ -395,7 +531,8 @@ class PackageController extends Controller {
                 "Manage Holiday"
             ),
             "Timetable Management" => array(
-                "Manage Timetable"
+                "Manage Timetable",
+                "Create Timetable Using Drag & Drop"
             ),
             "Attendance Management" => array(
                 "Manage Attendance"
@@ -418,7 +555,8 @@ class PackageController extends Controller {
             ),
             "Staff Management" => array(
                 "Manage Role",
-                "Manage Staff"
+                "Manage Staff",
+                "Bulk Upload"
             ),
             "Assignment Management" => array(
                 "Manage Assignment",
@@ -427,12 +565,40 @@ class PackageController extends Controller {
             "Expense Management" => array(
                 "Manage Category",
                 "Manage Expense",
-                "Manage Staff Payroll"
+                "Manage Staff Payroll",
+                "Staff Allowances & Deductions",
             ),
             "Staff Leave Management" => array(
                 "Manage Staff Leaves",
                 "Manage Leave Allowances",
                 "Manage LWP (Leave Without Pay)"
+            ),
+            "Fees Management" => array(
+                "Manage Class Wise Fees",
+                "Manage Payment [ Cash/Cheque, Online ]",
+                "Manage Fees Receipt",
+                "Partial Pay Fees with Receipt"
+            ),
+            "School Gallery Management" => array(
+                "Manage School Gallery",
+                "Upload Multiple Images & Youtube Links"
+            ),
+            "ID Card - Certificate Generation" => array(
+                "Generate students - staff ID cards & certificates",
+                "Drag-and-Drop Certificate Builder"
+            ),
+            "Website Management" => array(
+                "Custom Domain",
+                "Content Management System (CMS)",
+                "User-Friendly Interface",
+                "Dynamic Content Editing",
+                "Online Student Admission",
+                "Third-Patry API (Google Captcha)"
+            ),
+            "Chat Module" => array(
+                "Parent - Teacher",
+                "Student - Teacher",
+                "Teacher - Staff",
             )
         );
 

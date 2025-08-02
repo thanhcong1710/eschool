@@ -11,12 +11,24 @@
         <button class="navbar-toggler navbar-toggler align-self-center" type="button" data-toggle="minimize">
             <span class="fa fa-bars"></span>
         </button>
+
+        <div class="align-items-stretch d-none d-md-block d-sm-block cache-clear">
+            <a class="btn btn-sm btn-inverse-info align-self-center" href="{{ url('cache-flush') }}">
+                {{ __('cache_clear') }}
+            </a>
+        </div>
+
+        @if ($schoolSettings['school_name'] ?? '')
+            <div class="align-items-stretch d-none d-md-block d-sm-block cache-clear">
+                <span class="ml-3">{{ $schoolSettings['school_name'] ?? '' }}</span>
+            </div>
+        @endif  
         @if (isset($systemSettings['email_verified']) && !$systemSettings['email_verified'])
             @can('email-setting-create')
                 <div class="mx-auto order-0">
                     <div class="alert alert-fill-danger my-2" role="alert">
-                        <i class="fa fa-exclamation"></i> Email Configuration is not verified
-                        <a href="{{ route('system-settings.email.index') }}" class="alert-link">Click here to redirect to email configuration</a>.
+                        <i class="fa fa-exclamation"></i>
+                        {{ __('Email Configuration is not verified') }} <a href="{{ route('system-settings.email.index') }}" class="alert-link">{{ __('Click here to redirect to email configuration') }}</a>.
                     </div>
                 </div>
             @endcan
@@ -36,6 +48,11 @@
                 </li>
             @endif
 
+            {{-- <li class="d-none d-md-block d-sm-block nav-item ml-4">
+                <div class="text-dark">
+                    <span><i class="mdi mdi-weather-sunny fa-2x cursor-pointer theme"></i></span>
+                </div>
+            </li> --}}
 
             <li class="nav-item dropdown">
                 <a class="nav-link count-indicator dropdown-toggle" id="messageDropdown" href="#" data-toggle="dropdown" aria-expanded="false">
@@ -66,10 +83,10 @@
                     </div>
                 </a>
                 <div class="dropdown-menu navbar-dropdown" aria-labelledby="profileDropdown">
-                    @can('update-admin-profile')
+                    {{-- @can('update-admin-profile') --}}
                         <a class="dropdown-item" href="{{ route('auth.profile.edit') }}"><i class="fa fa-user mr-2"></i>{{ __('profile') }}</a>
                         <div class="dropdown-divider"></div>
-                    @endcan
+                    {{-- @endcan --}}
                     <a class="dropdown-item" href="{{ route('auth.change-password.index') }}">
                         <i class="fa fa-refresh mr-2 text-success"></i>{{ __('change_password') }}</a>
                     <div class="dropdown-divider"></div>

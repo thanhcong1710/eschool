@@ -17,7 +17,7 @@ class Addon extends Model {
         'feature_id',
         'status'
     ];
-
+    protected $connection = 'mysql';
 
     public function feature() {
         return $this->belongsTo(Feature::class);
@@ -31,5 +31,10 @@ class Addon extends Model {
     public function addon_subscription()
     {
         return $this->hasMany(AddonSubscription::class,'feature_id','feature_id');
+    }
+
+    public function addon_subscription_count()
+    {
+        return $this->hasMany(AddonSubscription::class,'feature_id','feature_id')->withTrashed();
     }
 }

@@ -19,6 +19,9 @@ class InstallFinishController extends Controller
      */
     public function __invoke(): View|Factory|Application|RedirectResponse
     {
+        if (!env('APPSECRET')) {
+            return redirect()->route('install.purchase-code.index');
+        }
         if (
             empty(EnvSet::getValue('APP_KEY')) ||
             !DB::connection()->getPdo() ||

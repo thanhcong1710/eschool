@@ -99,12 +99,121 @@ class BootstrapTableService
      * @param $url
      * @return string
      */
-    public static function viewRelatedDataButton($url) {
-        $customClass = ["related-data-form", "btn-inverse-primary"];
+    public static function viewRelatedDataButton($url,  bool $modal = true) {
+        $customClass = ["edit-data", "btn-gradient-primary"];
         $customAttributes = [
-            "title" => trans("View Related Data"),
+            "title" => trans("View Related Data")
         ];
+        if ($modal) {
+            $customAttributes = [
+                "title" => "Edit",
+                "data-toggle" => "modal",
+                "data-target" => "#editModal"
+            ];
+
+            $customClass[] = "set-form-url";
+        }
+
         $iconClass = "fa fa-eye";
         return self::button($iconClass, $url, $customClass, $customAttributes);
     }
+
+    // Menu list
+
+    public static function menuButton($title, $url, $customClass = [], $customAttributes = [])
+    {
+        $attributes = '';
+        $customClassStr = implode(" ", $customClass);
+        if (count($customAttributes) > 0) {
+            foreach ($customAttributes as $key => $value) {
+                $attributes .= $key . '="' . $value . '" ';
+            }
+        }
+        return '<a href="' . $url . '" class="dropdown-item p-2 ' . $customClassStr . '" ' . $attributes . '>'. trans($title) .'</a>';
+    }
+
+    public static function menuEditButton($title, $url, bool $modal = true)
+    {
+        $customClass = ["edit-data"];
+        $customAttributes = [];
+        if ($modal) {
+            $customAttributes = [
+                "data-toggle" => "modal",
+                "data-target" => "#editModal"
+            ];
+
+            $customClass[] = " set-form-url";
+        }
+
+        return self::menuButton($title, $url, $customClass, $customAttributes);
+    }
+
+    public static function menuDeleteButton($title, $url)
+    {
+        $customClass = ["delete-form"];
+        $customAttributes = [
+            "title" => trans("Delete"),
+        ];
+        return self::menuButton($title, $url, $customClass, $customAttributes);
+    }
+
+    public static function menuRestoreButton($title, $url)
+    {
+        $customClass = ["restore-data"];
+        $customAttributes = [];
+        return self::menuButton($title, $url, $customClass, $customAttributes);
+    }
+
+    public static function menuTrashButton($title, $url)
+    {
+        $customClass = ["trash-data"];
+        $customAttributes = [];
+        return self::menuButton($title, $url, $customClass, $customAttributes);
+    }
+
+    public static function menuItem($operate)
+    {
+
+        // return '<div class="dropdown"> <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="dropdownMenu2" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> Dropdown </button> <div class="dropdown-menu" aria-labelledby="dropdownMenu2"> '. $operate .' </div> </div>';
+
+        return '<div class="dropdown table-action-column d-flex align-items-center"> <button class="btn btn-sm btn-inverse-dark d-flex align-items-center" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="fa fa-ellipsis-v"></i> </button> <div class="dropdown-menu action-column-dropdown-menu" aria-labelledby="dropdownMenuButton"> '. $operate .' </div> </div>';
+    }
+
+    /**
+     * @param $url
+     * @return string
+     */
+    public static function downloadButton($urls) {
+        $customClass = ["related-data-form", "btn-inverse-primary"];
+        $customAttributes = [
+            "title" => trans("database_download"),
+        ];
+        $iconClass = "fa fa-download";
+        return self::download_urls($iconClass, $urls, $customClass, $customAttributes);
+    }
+    
+    public static function download_urls(string $iconClass, array $urls, array $customClass = [], array $customAttributes = []) {
+
+        $customClassStr = implode(" ", $customClass);
+        $class = self::$defaultClasses . ' ' . $customClassStr;
+        $attributes = '';
+        if (count($customAttributes) > 0) {
+            foreach ($customAttributes as $key => $value) {
+                $attributes .= $key . '="' . $value . '" ';
+            }
+        }
+
+        return '<a href="' . $urls[0] . '" class="' . $class . '" ' . $attributes . ' ><i class="' . $iconClass . '"></i></a>  <a href="' . $urls[1] . '" class="' . $class . '" ' . $attributes . ' ><i class="fa fa-image"></i></a>  ';
+
+    }
+
+    // View Button
+    public static function viewButton($url, $customClass = [], $customAttributes = []) {
+        $iconClass = "fa fa-eye";
+        return self::button($iconClass, $url, 
+            array_merge(["btn-gradient-primary"], $customClass), 
+            array_merge(["title" => trans("View")], $customAttributes)
+        );
+    }
+
 }

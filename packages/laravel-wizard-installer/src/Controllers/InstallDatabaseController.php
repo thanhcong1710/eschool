@@ -12,11 +12,11 @@ class InstallDatabaseController extends Controller
 {
     public function __invoke(): View|Factory|Application|RedirectResponse
     {
-        if (
+        if (!env('APPSECRET') ||
             !(new InstallServerController())->check() ||
             !(new InstallFolderController())->check()
         ) {
-            return redirect()->route('LaravelWizardInstaller::install.folders');
+            return redirect()->route('install.purchase-code.index');
         }
 
         return view('installer::steps.database');

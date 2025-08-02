@@ -23,27 +23,28 @@ class Semester extends Model {
     protected $appends = ['current', 'start_month_name', 'end_month_name'];
 
     public function scopeOwner($query) {
-
-        if (Auth::user()->school_id) {
-            if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+        if (Auth::user()) {
+            if (Auth::user()->school_id) {
+                if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
+        
+                if (Auth::user()->hasRole('Student')) {
+                    return $query->where('school_id', Auth::user()->school_id);
+                }
                 return $query->where('school_id', Auth::user()->school_id);
             }
-    
-            if (Auth::user()->hasRole('Student')) {
-                return $query->where('school_id', Auth::user()->school_id);
-            }
-            return $query->where('school_id', Auth::user()->school_id);
-        }
 
-        if (!Auth::user()->school_id) {
-            if (Auth::user()->hasRole('Super Admin')) {
+            if (!Auth::user()->school_id) {
+                if (Auth::user()->hasRole('Super Admin')) {
+                    return $query;
+                }
+        
+                if (Auth::user()->hasRole('Guardian')) {
+                    return $query;
+                }
                 return $query;
             }
-    
-            if (Auth::user()->hasRole('Guardian')) {
-                return $query;
-            }
-            return $query;
         }
 
         return $query;

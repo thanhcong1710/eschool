@@ -14,7 +14,8 @@ class StudentSubject extends Model
         'student_id',
         'class_section_id',
         'class_subject_id',
-        'session_year_id'
+        'session_year_id',
+        'school_id'
     ];
 
     public function class_subject()
@@ -24,13 +25,13 @@ class StudentSubject extends Model
 
     public function scopeOwner()
     {
-        if (Auth::user()->hasRole("School Admin")) {
+        if (Auth::user() && Auth::user()->hasRole("School Admin")) {
             return $this->where('school_id',Auth::user()->school_id);
         }
-        if (Auth::user()->hasRole("Teacher")) {
+        if (Auth::user() && Auth::user()->hasRole("Teacher")) {
             return $this->where('school_id',Auth::user()->school_id);
         }
-        if (Auth::user()->hasRole("Student")) {
+        if (Auth::user() && Auth::user()->hasRole("Student")) {
             return $this->where('school_id',Auth::user()->school_id);
         }
         return $this;

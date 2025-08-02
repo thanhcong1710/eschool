@@ -64,7 +64,9 @@ class FaqController extends Controller
         $sql = $this->faqs->builder()
             ->when($search, function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
-                    $query->where('id', 'LIKE', "%$search%")->orwhere('title', 'LIKE', "%$search%")->orwhere('description', 'LIKE', "%$search%")->orwhere('date', 'LIKE', "%$search%");
+                    $query->where('id', 'LIKE', "%$search%")
+                    ->orwhere('title', 'LIKE', "%$search%")
+                    ->orwhere('description', 'LIKE', "%$search%");
                 });
             });
 

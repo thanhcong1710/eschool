@@ -49,9 +49,15 @@
                                             <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
                                         </span>
                                     </div>
+                                    <div class="form-check w-fit-content">
+                                        <label class="form-check-label user-select-none">
+                                            <input type="checkbox" class="form-check-input" name="is_send_notification" id="send_notification">
+                                            {{ __('send_notification') }}
+                                        </label>
+                                    </div>
                                 </div>
                                 <div class="form-group col-sm-12 col-xs-12">
-                                    <input class="btn btn-theme submit_bulk_file" type="submit" value="Submit"
+                                    <input class="btn btn-theme submit_bulk_file float-right" type="submit" value="{{ __('submit') }}"
                                         name="submit" id="submit_bulk_file">
                                 </div>
                             </div>

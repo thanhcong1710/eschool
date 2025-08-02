@@ -98,6 +98,8 @@ interface BaseInterface {
      */
     public function upsert(array $payloads, array $uniqueColumns, array $updatingColumn): bool;
 
+    public function upsertProfile(array $payloads, array $uniqueColumns, array $updatingColumn): bool;
+
 
     /**
      * Delete model by id.

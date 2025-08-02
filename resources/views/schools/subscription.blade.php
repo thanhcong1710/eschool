@@ -100,14 +100,14 @@
                                     'status',
                                     [
                                         '0' => __('all'),
-                                        '1' => __('current_cycle'),
-                                        '2' => __('paid'),
-                                        '3' => __('over_due'),
-                                        '4' => __('failed'),
-                                        '5' => __('pending'),
-                                        '6' => __('next_billing_cycle'),
-                                        '7' => __('unpaid'),
-                                        '8' => __('bill_not_generated'),
+                                        'Current Cycle' => __('current_cycle'),
+                                        'Paid' => __('paid'),
+                                        'Over Due' => __('over_due'),
+                                        'Failed' => __('failed'),
+                                        'Pending' => __('pending'),
+                                        'Next Billing Cycle' => __('next_billing_cycle'),
+                                        'Unpaid' => __('unpaid'),
+                                        'Bill Not Generated' => __('bill_not_generated'),
                                     ],
                                     null,
                                     ['class' => 'form-control', 'id' => 'status'],
@@ -130,10 +130,10 @@
                                 <th scope="col" data-field="school_name">{{ __('school_name') }}</th>
                                 <th scope="col" data-field="plan" data-formatter="planDetailFormatter">{{ __('plan') }}</th>
                                 <th scope="col" data-field="bill_date">{{ __('bill_generate_date') }} </th>
-                                <th scope="col" data-field="subscription_bill.due_date">{{ __('bill_due_date') }} </th>
+                                <th scope="col" data-field="subscription_bill.due_date" data-formatter="dateFormatter">{{ __('bill_due_date') }} </th>
                                 <th scope="col" data-field="amount">{{ __('bill_amount') }}({{ $settings['currency_symbol'] }})</th>
                                 <th scope="col" data-field="status" class="text-center" data-formatter="subscriptionStatusFormatter">{{ __('status') }} </th>
-                                <th scope="col" data-field="operate" data-escape="false" data-events="subscriptionExpiryEvents">{{ __('action') }}</th>
+                                <th scope="col" data-field="operate" data-escape="false" data-formatter="actionColumnFormatter" data-events="subscriptionExpiryEvents">{{ __('action') }}</th>
                             </tr>
                             </thead>
                         </table>
@@ -164,12 +164,11 @@
                                        placeholder="{{ __('extend_bill_date') }}" required
                                        class="form-control expiry-date"/>
                             </div>
-
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary"
-                                        data-dismiss="modal">{{ __('close') }}</button>
-                                <input class="btn btn-theme" type="submit" value={{ __('submit') }} />
-                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary"
+                                    data-dismiss="modal">{{ __('close') }}</button>
+                            <input class="btn btn-theme" type="submit" value={{ __('submit') }} />
                         </div>
                     </form>
                 </div>
@@ -198,12 +197,11 @@
                                        placeholder="{{ __('extend_bill_due_date') }}" required
                                        class="form-control due-date"/>
                             </div>
-
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary"
-                                        data-dismiss="modal">{{ __('close') }}</button>
-                                <input class="btn btn-theme" type="submit" value={{ __('submit') }} />
-                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary"
+                                    data-dismiss="modal">{{ __('close') }}</button>
+                            <input class="btn btn-theme" type="submit" value={{ __('submit') }} />
                         </div>
                     </form>
                 </div>
@@ -229,12 +227,11 @@
                                 <label>{{ __('package') }} <span class="text-danger">*</span></label>
                                 {!! Form::select('package_id', $packages, null, ['class' => 'form-control', 'id' => 'update_package_id']) !!}
                             </div>
-
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary"
-                                        data-dismiss="modal">{{ __('close') }}</button>
-                                <input class="btn btn-theme" type="submit" value={{ __('submit') }} />
-                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary"
+                                    data-dismiss="modal">{{ __('close') }}</button>
+                            <input class="btn btn-theme" type="submit" value={{ __('submit') }} />
                         </div>
                     </form>
                 </div>

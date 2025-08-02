@@ -4,7 +4,7 @@
  * Table Query Params
  */
 function classQueryParams(p) {
-    let tableListType = $('.table-list-type.active').data('value');
+    let tableListType = $('.table-list-type.active').data('id');
     return {
         limit: p.limit,
         sort: p.sort,
@@ -13,10 +13,51 @@ function classQueryParams(p) {
         search: p.search,
         class_id: $('#filter_class_id').val(),
         medium_id: $('#filter_medium_id').val(),
-        show_deleted: (tableListType === "" || tableListType === "All" || tableListType == null) ? 0 : 1,
+        show_deleted: tableListType,
     };
 }
 
+function NotificationUserqueryParams(p) {
+    
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        roles: $('#roles').val(),
+        over_due_fees_roles: $('#over_due_fees_roles').val(),
+        type: $('input[name="type"]:checked').val(),
+    };
+}
+
+function feesQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        session_year_id: $('#filter_session_year_id').val(),
+        medium_id: $('#filter_medium_id').val(),
+        show_deleted: tableListType,
+    };
+}
+
+
+function PayrollSettingsqueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        type: $('#filter_type').val(),
+        show_deleted: tableListType,
+    };
+}
 
 function leaveDetailQueryParams(p) {
     return {
@@ -25,12 +66,14 @@ function leaveDetailQueryParams(p) {
         order: p.order,
         offset: p.offset,
         search: p.search,
-        session_year_id: $('#filter_session_year_id').val()
+        session_year_id: $('#filter_session_year_id').val(),
+        staff_id: $('#filter_staff_id').val(),
+        
     };
 }
 
 function schoolQueryParams(p) {
-    let tableListType = $('.table-list-type.active').data('value');
+    let tableListType = $('.table-list-type.active').data('id');
     return {
         limit: p.limit,
         sort: p.sort,
@@ -38,7 +81,7 @@ function schoolQueryParams(p) {
         offset: p.offset,
         search: p.search,
         package_id: $('#filter_package_id').val(),
-        show_deleted: (tableListType === "" || tableListType === "All" || tableListType == null) ? 0 : 1,
+        show_deleted: tableListType,
     };
 }
 
@@ -78,9 +121,49 @@ function getExamResult(p) {
     };
 }
 
+function getYearlyExamResult(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        exam_id: $('#filter_exam_id').val(),
+        session_year_id: $('#filter_session_year_id').val(),
+        class_section_id: $('#filter_class_section_id').val(),
+    };
+}
+
+function getSubjectWiseExamResult(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        exam_id: $('#filter_subject_wise_exam_id').val(),
+        session_year_id: $('#filter_subject_wise_session_year_id').val(),
+        class_section_id: $('#filter_subject_wise_class_section_id').val(),
+        subject_id: $('#filter_subject_wise_subject_id').val(),
+    };
+}
+
+function getRankWiseExamResult(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        exam_id: $('#filter_exam_id').val(),
+        session_year_id: $('#filter_rank_wise_session_year_id').val(),
+        class_section_id: $('#filter_rank_wise_class_section_id').val(),
+        subject_id: $('#filter_rank_wise_subject_id').val(),
+    };
+}
 
 function SubjectQueryParams(p) {
-    let tableListType = $('.table-list-type.active').data('value');
+    let tableListType = $('.table-list-type.active').data('id');
     return {
         limit: p.limit,
         sort: p.sort,
@@ -88,7 +171,7 @@ function SubjectQueryParams(p) {
         offset: p.offset,
         search: p.search,
         medium_id: $('#filter_subject_id').val(),
-        show_deleted: (tableListType === "" || tableListType === "All" || tableListType == null) ? 0 : 1,
+        show_deleted: tableListType,
     };
 }
 
@@ -118,6 +201,16 @@ function payrollQueryParams(p) {
     };
 }
 
+function payrollListQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        year: $('#filter_year').val(),
+    };
+}
 
 function leaveQueryParams(p) {
     return {
@@ -144,6 +237,17 @@ function AssignTeacherQueryParams(p) {
     };
 }
 
+
+function webSettingsQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+    };
+}
+
 function StudentDetailQueryParams(p) {
     return {
         limit: p.limit,
@@ -166,7 +270,7 @@ function AssignmentSubmissionQueryParams(p) {
         search: p.search,
         subject_id: $('#filter-subject-id').val(),
         class_section_id: $('#filter-class-section-id').val(),
-
+        semester_id: $('#filter-semester-id').val(),
     };
 }
 
@@ -179,7 +283,8 @@ function CreateAssignmentSubmissionQueryParams(p) {
         search: p.search,
         subject_id: $('#filter-subject-id').val(),
         class_id: $('#filter-class-section-id').val(),
-        session_year_id: $("#filter_session_year_id").val()
+        session_year_id: $("#filter_session_year_id").val(),
+        semester_id: $('#filter-semester-id').val(),
     };
 }
 
@@ -193,6 +298,7 @@ function CreateLessonQueryParams(p) {
         class_subject_id: $('#filter-subject-id').val(),
         class_id: $('#filter-class-section-id').val(),
         lesson_id: $('#filter_lesson_id').val(),
+        semester_id: $('#filter-semester-id').val(),
     };
 }
 
@@ -205,7 +311,8 @@ function CreateTopicQueryParams(p) {
         search: p.search,
         class_subject_id: $('#filter-subject-id').val(),
         class_id: $('#filter-class-section-id').val(),
-        lesson_id: $('#filter_lesson_id').val(),
+        lesson_id: $('#filter-lesson-id').val(),
+        semester_id: $('#filter-semester-id').val(),
     };
 }
 
@@ -216,9 +323,9 @@ function uploadMarksqueryParams(p) {
         order: p.order,
         offset: p.offset,
         search: p.search,
-        'class_section_id': $('#exam-class-section-id').val(),
-        'class_subject_id': $('#class_subject_id').val(),
-        'exam_id': $('#exam-id').val(),
+        'class_section_id': $('#class_section_id').val(),
+        'class_subject_id': $('#subject_id').val(),
+        'exam_id': $('#exam_id').val(),
     };
 }
 
@@ -230,10 +337,14 @@ function feesPaidListQueryParams(p) {
         offset: p.offset,
         search: p.search,
         fees_id: $('#filter_fees_id').val(),
-        class_id: $('#filter_class_id').val(),
+        class_id: $('#filter_fees_id').find('option:selected').data('class-section-id'),
         session_year_id: $('#filter_session_year_id').val(),
         mode: $('#filter_mode').val(),
-        paid_status: $('#filter_paid_status').val()
+        paid_status: $('#filter_paid_status').val(),
+        month: $('.paid-month').val(),
+        payment_gateway: $('.payment-gateway').val(),
+        class_section_id: $('#filter-class-section-id').val(),
+        online_offline_payment: $('#filter_online_offline_payment').val(),
     };
 }
 
@@ -245,10 +356,14 @@ function feesPaymentTransactionQueryParams(p) {
         offset: p.offset,
         search: p.search,
         payment_status: $('#filter_payment_status').val(),
+        session_year_id: $('#filter_session_year_id').val(),
+        month: $('.paid-month').val(),
     };
 }
 
 function subscriptionTransactionQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+    
     return {
         limit: p.limit,
         sort: p.sort,
@@ -273,17 +388,18 @@ function studentRollNumberQueryParams(p) {
 }
 
 function onlineExamQueryParams(p) {
-    let tableListType = $('.table-list-type.active').text();
+    let tableListType = $('.table-list-type.active').data('id');
     return {
         limit: p.limit,
         sort: p.sort,
         order: p.order,
         offset: p.offset,
         search: p.search,
-        show_deleted: (tableListType === "" || tableListType === "All" || tableListType == null) ? 0 : 1,
+        show_deleted: tableListType,
         'class_section_id': $('#filter-class-section-id').val(),
         'class_subject_id': $('#filter-subject-id').val(),
         'subject_id': $('#filter-class-subject-id').val(),
+        'session_year_id': $('#filter_session_year_id').val(),
     };
 }
 
@@ -302,8 +418,24 @@ function onlineExamQuestionsQueryParams(p) {
 }
 
 function studentDetailsQueryParams(p) {
-    let tableListType = $('.student-list-type.active').data('value');
-    return {
+    let tableListType = $('.table-list-type.active').data('id');
+    // var options = $table.bootstrapTable('getOptions');
+    // if (!options.pagination) {
+    //     p.limit = options.totalRows
+    //     // return p;
+    // }
+    // p.limit = -1;
+    var options = $table.bootstrapTable('getOptions');
+    if (options.pagination != undefined && !options.pagination) {
+        // sample data only contains 20 items - so replace limit = options.totalRows;
+        p.limit = options.totalRows;
+        // .NET API fails if these params are unset
+        // if they = undefined  they are not passed to server
+        // for some reason all params must be present when submitted to a .NET Web API
+        // even if defined as optional in .NET method - call fails if not present
+      }
+
+    var data = {
         limit: p.limit,
         sort: p.sort,
         order: p.order,
@@ -311,8 +443,11 @@ function studentDetailsQueryParams(p) {
         search: p.search,
         class_id: $('#filter_class_section_id').val(),
         session_year_id: $('#filter_session_year_id').val(),
-        show_deactive: (tableListType === "" || tableListType === "active" || tableListType == null) ? 0 : 1,
+        exam_id: $('#exam_id').val(),
+        show_deactive: tableListType,
     };
+
+    return data;
 }
 
 function attendanceQueryParams(p) {
@@ -328,6 +463,18 @@ function attendanceQueryParams(p) {
 }
 
 function holidayQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        'session_year_id': $('#filter_session_year_id').val(),
+        'month': $('#filter_month').val(),
+    }
+}
+
+function galleryQueryParams(p) {
     return {
         limit: p.limit,
         sort: p.sort,
@@ -351,7 +498,25 @@ function userStatusQueryParams(p) {
 }
 
 function queryParams(p) {
-    let tableListType = $('.table-list-type.active').data('value');
+    let tableListType = $('.table-list-type.active').data('id');
+    if (tableListType === 1) {
+        $('.btn-update-rank').hide();
+    } else {
+        $('.btn-update-rank').show();
+    }
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        show_deleted: tableListType,
+    };
+}
+
+
+function packageQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
     if (tableListType === 'Trashed') {
         $('.btn-update-rank').hide();
     } else {
@@ -363,7 +528,8 @@ function queryParams(p) {
         order: p.order,
         offset: p.offset,
         search: p.search,
-        show_deleted: (tableListType === "" || tableListType === "All" || tableListType == null) ? 0 : 1,
+        type: $('#type').val(),
+        show_deleted: tableListType,
     };
 }
 
@@ -380,7 +546,7 @@ function promoteStudentQueryParams(p) {
 }
 
 function examQueryParams(p) {
-    let tableListType = $('.table-list-type.active').data('value');
+    let tableListType = $('.table-list-type.active').data('id');
     return {
         limit: p.limit,
         sort: p.sort,
@@ -388,7 +554,8 @@ function examQueryParams(p) {
         offset: p.offset,
         search: p.search,
         session_year_id: $('#filter_session_year_id').val(),
-        show_deleted: (tableListType === "" || tableListType === "All" || tableListType == null) ? 0 : 1,
+        medium_id: $('#filter_medium_id').val(),
+        show_deleted: tableListType,
     };
 }
 
@@ -410,6 +577,32 @@ function subscriptionReportQueryParams(p) {
         offset: p.offset,
         search: p.search,
         status: $('#status').val()
+    };
+}
+
+function examTimetableQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        exam_id: $('#filter-exam-id').val()
+    };
+}
+
+function announcementQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        show_deleted: tableListType,
+        session_year_id: $('#filter_session_year_id').val(),
+        class_section_id: $('#filter_class_section_id').val(),
+        subject_id: $('#filter_subject_id').val()
     };
 }
 
@@ -436,16 +629,16 @@ $('.table-list-type').on('click', function (e) {
 })
 
 
-$('.student-list-type').on('click', function (e) {
-    e.preventDefault();
-    //Highlight the current selected type
-    $('.student-list-type').removeClass('active').parent("b").contents().unwrap();
-    $(this).wrap("<b></b>").addClass('active');
+// $('.student-list-type').on('click', function (e) {
+//     e.preventDefault();
+//     //Highlight the current selected type
+//     $('.student-list-type').removeClass('active').parent("b").contents().unwrap();
+//     $(this).wrap("<b></b>").addClass('active');
 
-    //Refresh the bootstrap table so that data can be loaded according to the selected type
-    //Based on this selected value new query param will be added in Bootstrap Table Query Params
-    $('#table_list').bootstrapTable('refresh');
-})
+//     //Refresh the bootstrap table so that data can be loaded according to the selected type
+//     //Based on this selected value new query param will be added in Bootstrap Table Query Params
+//     $('#table_list').bootstrapTable('refresh');
+// })
 
 function transferStudentQueryParams(p) {
     return {
@@ -459,13 +652,121 @@ function transferStudentQueryParams(p) {
 }
 
 function activeDeactiveQueryParams(p) {
-    let tableListType = $('.table-list-type.active').data('value');
+    let tableListType = $('.table-list-type.active').data('id');
     return {
         limit: p.limit,
         sort: p.sort,
         order: p.order,
         offset: p.offset,
         search: p.search,
-        show_deactive: (tableListType === "" || tableListType === "active" || tableListType == null) ? 0 : 1,
+        show_deactive: tableListType,
+        session_year_id: $('#filter_session_year_id').val(),
+    };
+}
+
+function studentsQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        'class_id': $('#filter_class_id').val(),
+        'class_section_id': $('#filter_class_section_id').val(),
+    }
+}
+
+
+function schoolInquiryQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        'status' : $('#filter_status_id').val(),
+        'date' : $('#filter_date').val(),
+    };
+}
+
+function guardianQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        class_id: $('#filter_class_id').val(),
+        class_section_id: $('#filter_class_section_id').val()
+    };
+}
+
+function FormFieldQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        filter_all_user_type: $('#filter_all_user_type').val(),
+        show_deleted: tableListType
+    };
+}
+
+function certificateTemplateQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+    };
+}
+
+function contactInquiryQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+    return {
+        limit: p.limit,
+        offset: p.offset,
+        search: p.search,
+        sort: p.sort,
+        order: p.order,
+        show_deleted: tableListType
+    };
+}
+
+function studentReportsQueryParams(p) {
+    let tableListType = $('.table-list-type.active').data('id');
+  
+    var options = $table.bootstrapTable('getOptions');
+    if (options.pagination != undefined && !options.pagination) {
+        p.limit = options.totalRows;
+      }
+
+    var data = {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        class_id: $('#filter_class_section_id').val(),
+        session_year_id: $('#filter_session_year_id').val(),
+        exam_id: $('#exam_id').val(),
+        show_deactive: tableListType,
+    };
+
+    return data;
+}
+
+function assignElectiveSubjectQueryParams(p) {
+    return {
+        limit: p.limit,
+        sort: p.sort,
+        order: p.order,
+        offset: p.offset,
+        search: p.search,
+        class_section_id: $('#filter-class-section-id').val(),
+        subject_id: $('#subject_id').val(),
     };
 }

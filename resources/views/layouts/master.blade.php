@@ -4,18 +4,23 @@
 @endphp
 @if($lang)
     @if ($lang->is_rtl)
-        <html lang="en" dir="rtl">
+        <html lang="{{ $lang->code ?? 'en' }}" dir="rtl">
     @else
-        <html lang="en">
+        <html lang="{{ $lang->code ?? 'en' }}" dir="ltr">
     @endif
 @else
-    <html lang="en">
+    <html lang="en" dir="ltr">
 @endif
 <head>
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>@yield('title') || {{ config('app.name') }}</title>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <title>
+        @yield('title') || 
+        {{-- {{ config('app.name') }} --}}
+        {{ $systemSettings['system_name'] ?? 'eSchool - Saas' }}
+    </title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @include('layouts.include')
     @yield('css')

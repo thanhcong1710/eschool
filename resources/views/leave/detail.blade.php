@@ -20,6 +20,18 @@
                             {{ __('list') }} {{ __('leave') }} {{ __('details') }}
                         </h4>
                         <div class="row" id="toolbar">
+
+                            @if ($staffs)
+                                <div class="form-group col-12 col-sm-12 col-md-3 col-lg-3">
+                                    <label for="filter_session_year_id" class="filter-menu">{{ __('staff') }}</label>
+                                    {!! Form::select('session_year_id', $staffs, null, [
+                                        'class' => 'form-control',
+                                        'id' => 'filter_staff_id',
+                                        'placeholder' => __('select') .' '. __('staff')
+                                    ]) !!}
+                                </div>
+                            @endif
+
                             <div class="form-group col-12 col-sm-12 col-md-3 col-lg-3">
                                 <label for="filter_session_year_id" class="filter-menu">{{ __('Session Year') }}</label>
                                 {!! Form::select('session_year_id', $sessionYear, $current_session_year->id ?? null, [
@@ -34,10 +46,10 @@
                                        data-url="{{ route('leave.detail') }}" data-click-to-select="true"
                                        data-side-pagination="server" data-pagination="false"
                                        data-page-list="[5, 10, 20, 50, 100, 200]" data-search="false" data-toolbar="#toolbar"
-                                       data-show-columns="false" data-show-refresh="true" data-fixed-columns="true"
+                                       data-show-columns="false" data-show-refresh="true" data-fixed-columns="false"
                                        data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                        data-mobile-responsive="true" data-sort-name="id" data-sort-order="desc"
-                                       data-maintain-selected="true" data-export-data-type='all'
+                                       data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
                                        data-export-options='{ "fileName": "leave-<?= date('d-m-y') ?>","ignoreColumn":
                                     ["operate"]}'
                                        data-query-params="leaveDetailQueryParams">

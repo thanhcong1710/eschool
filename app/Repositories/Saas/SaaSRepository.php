@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 class SaaSRepository extends BaseRepository
 {
 
+
     public function defaultModel()
     {
         return parent::defaultModel()->owner();
@@ -32,7 +33,13 @@ class SaaSRepository extends BaseRepository
     public function createBulk(array $payload): bool
     {
         $payload = array_map(static function ($d) {
-            $d['school_id'] = Auth::user()->school_id;
+            $user = Auth::user();
+            
+            if ($user && $user->school_id) {
+                $d['school_id'] = $user->school_id;
+            } elseif (!empty($d['school_id'])) {
+                $d['school_id'] = $d['school_id'];
+            } 
             return $d;
         }, $payload);
         return parent::createBulk($payload);

@@ -44,12 +44,21 @@
                                 </select>
                             </div>
 
+                            @if($semesters->count() > 0)
+                                <div class="form-group col-sm-12 col-md-3">
+                                    <label for="filter-semester-id" class="filter-menu">{{ __('Semester') }}</label>
+                                    <select name="filter-semester-id" id="filter-semester-id" class="form-control">
+                                        <option value="">{{ __('all') }}</option>
+                                    </select>
+                                </div>
+                            @endif
+
                         </div>
                         <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                data-url="{{ route('assignment.submission.list') }}" data-click-to-select="true"
                                data-side-pagination="server" data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
                                data-search="true" data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true"
-                               data-fixed-columns="true" data-fixed-number="2" data-fixed-right-number="1"
+                               data-fixed-columns="false" data-fixed-number="2" data-fixed-right-number="1"
                                data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
                                data-query-params="AssignmentSubmissionQueryParams" data-sort-order="desc"
                                data-maintain-selected="true" data-export-data-type='all'
@@ -65,11 +74,11 @@
                                 <th scope="col" data-field="student.full_name" data-sortable="false">{{ __('student_name') }}</th>
                                 <th scope="col" data-field="file" data-sortable="false" data-formatter="fileFormatter">{{ __('files') }}</th>
                                 <th scope="col" data-field="status" data-sortable="false" data-formatter="assignmentSubmissionStatusFormatter">{{ __('status') }}</th>
-                                <th scope="col" data-field="assignment.points" data-sortable="false">{{ __('points') }}</th>
+                                <th scope="col" data-field="points" data-sortable="false">{{ __('points') }}</th>
                                 <th scope="col" data-field="feedback" data-sortable="false">{{ __('feedback') }}</th>
                                 <th scope="col" data-field="session_year.name" data-sortable="false" data-visible="false">{{ __('Session Year') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="false" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="false" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false">{{ __('updated_at') }}</th>
                                 <th scope="col" data-field="operate" data-events="assignmentSubmissionEvents" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>
@@ -144,7 +153,7 @@
                             </div>
                             <div class="modal-footer">
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('close') }}</button>
-                                <input class="btn btn-theme" type="submit" value={{ __('edit') }} />
+                                <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                             </div>
                         </form>
                     </div>
@@ -152,4 +161,19 @@
             </div>
         </div>
     </div>
+@endsection
+
+@section('js')
+    <script>
+        $('.edit-status').change(function (e) { 
+            e.preventDefault();
+            var status = $('input[name="status"]:checked').val();
+            if (status == 1) {
+                $('#points').attr('disabled', false);
+            } else {
+                $('#points').val(null);
+                $('#points').attr('disabled', true);
+            }
+        });
+    </script>
 @endsection

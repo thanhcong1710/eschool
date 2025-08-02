@@ -11,7 +11,11 @@ class Staff extends Model {
     protected $fillable = [
         'user_id',
         'qualification',
-        'salary'
+        'salary',
+        'joining_date',
+        'session_year_id',
+        'join_session_year_id',
+        'leave_session_year_id'
     ];
     protected $hidden = ['created_at','updated_at'];
 
@@ -52,19 +56,34 @@ class Staff extends Model {
        return $this->hasMany(Leave::class, 'user_id', 'user_id');
    }
 
-//    public function subjects()
-//    {
-//        return $this->hasMany(SubjectTeacher::class, 'teacher_id');
-//    }
+   public function scopeClasses($query)
+   {
+        return $query;
+   }
 
-//    public function classes() {
-//        return $this->hasMany(SubjectTeacher::class, 'teacher_id')->groupBy('class_section_id');
-//    }
+   public function subjects()
+   {
+       return $this->hasMany(SubjectTeacher::class, 'teacher_id', 'user_id');
+   }
 
-//    public function class_teacher() {
-//        return $this->hasMany(ClassTeacher::class, 'teacher_id', 'user_id');
-//    }
+   public function classes() {
+       return $this->hasMany(SubjectTeacher::class, 'teacher_id', 'user_id')->groupBy('class_section_id');
+   }
 
+   public function class_teacher() {
+       return $this->hasMany(ClassTeacher::class, 'teacher_id', 'user_id')->with('class_section.class.stream','class_section.section','class_section.medium');
+   }
+
+   public function staffSalary()
+    {
+        return $this->hasMany(StaffSalary::class, 'staff_id','id');
+    }
+
+    public function extra_user_datas()
+    {
+        return $this->hasMany(ExtraStudentData::class, 'user_id');
+    }
+    
 //    public function scopeTeachers($query)
 //    {
 //        if (Auth::user()->hasRole('Teacher')) {

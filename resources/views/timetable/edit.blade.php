@@ -33,33 +33,37 @@
                                 <p><strong>{{ __('Subject') }}</strong></p>
 
                                 @foreach ($subjectTeachers as $subjectTeacher)
-                                    <div class='fc-event fc-h-event fc-div-color fc-daygrid-event fc-daygrid-block-event'
+                                    {{-- @dd($subjectTeacher->toArray()) --}}
+                                    <div class='fc-event fc-h-event fc-div-color fc-daygrid-event fc-daygrid-block-event text-wrap'
                                          style="background-color: {{ $subjectTeacher->subject->bg_color }}"
                                          data-color="{{ $subjectTeacher->subject->bg_color }}"
                                          data-subject_teacher_id="{{ $subjectTeacher->id }}"
                                          data-subject_id="{{ $subjectTeacher->subject_id }}"
+                                         data-subject-type="{{ $subjectTeacher->class_subject ? $subjectTeacher->class_subject->type : '' }}"
                                          data-duration='{{ $timetableSettingsData['timetable_duration'] ?? '01:00:00' }}'
                                          data-note="">
-                                        <div class='fc-event-main'>
-                                            {{ $subjectTeacher->subject->name . ' - ' . $subjectTeacher->teacher->full_name }}
+                                        <div class='fc-event-main px-2' style="width: -webkit-fill-available" data-subject-type="{{ $subjectTeacher->class_subject ? $subjectTeacher->class_subject->type : '' }}">
+                                            {{ Str::limit($subjectTeacher->subject->name .' ( '.$subjectTeacher->subject->type.' ) '.' - ' . $subjectTeacher->teacher->full_name, 25, ' ...') }}
                                         </div>
                                     </div>
                                 @endforeach
 
                                 @foreach ($subjectWithoutTeacherAssigned as $subject)
+                                    {{-- @dd($subject->toArray()) --}}
                                     <div class='fc-event fc-h-event fc-div-color fc-daygrid-event fc-daygrid-block-event'
                                          style="background-color: {{ $subject->bg_color }}"
                                          data-color="{{ $subject->bg_color }}"
                                          data-duration='{{ $timetableSettingsData['timetable_duration'] ?? '01:00:00' }}'
-                                         data-subject_id="{{ $subject->id }}" data-note="">
-                                        <div class='fc-event-main'>{{ $subject->name }}</div>
+                                         data-subject_id="{{ $subject->id }}" data-note=""
+                                         data-subject-type="{{ $subject->class_subject ? $subject->class_subject->type : '' }}">
+                                        <div class='fc-event-main' data-subject-type="{{ $subject->class_subject ? $subject->class_subject->type : '' }}">{{  Str::limit($subject->name.' ( '.$subject->type.' )', 25, ' ...') }}</div>
                                     </div>
                                 @endforeach
 
                                 <div class='fc-event fc-h-event fc-daygrid-event fc-daygrid-block-event'
                                      style="background-color:rgb(11, 11, 11)" data-color="black" data-duration='00:30:00'
                                      data-note="Break">
-                                    <div class='fc-event-main'>{{ __('Break') }}</div>
+                                    <div class='fc-event-main px-2'>{{ __('Break') }}</div>
                                 </div>
                             </div>
                             <div id='calendar' class="col-md-10 col-sm-12 col-12 no-header-toolbar"></div>
@@ -74,6 +78,7 @@
 @section('js')
     <script>
         @foreach ($timetables as $timetable)
+
         createTimetable.addEvent({
             title: "{{ $timetable->title }}",
             daysOfWeek: [days.indexOf("{{ $timetable->day }}")],
@@ -81,8 +86,10 @@
             endTime: "{{ $timetable->end_time }}",
             color: "{{ $timetable->subject->bg_color ?? 'Black' }}",
             id: "{{ $timetable->id }}",
+            subject_type: "{{ $timetable->subject && $timetable->subject->class_subjects && count($timetable->subject->class_subjects) > 0 ? $timetable->subject->class_subjects[0]->type : '' }}",
         });
         @endforeach
+        
         $(document).ready(function () {
             createTimetable.setOption("slotMinTime",
                 "{{ $timetableSettingsData['timetable_start_time'] ?? '00:00:00' }}");
@@ -91,5 +98,6 @@
             createTimetable.setOption("slotDuration",
                 "{{ $timetableSettingsData['timetable_duration'] ?? '00:00:00' }}");
         })
+        
     </script>
 @endsection

@@ -23,7 +23,7 @@
                             <div class="row">
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label for="">{{ __('class_section') }}</label>
-                                    <select name="" id="exam-class-section-id" required class="form-control">
+                                    <select name="class_section_id" id="class_section_id" required class="form-control">
                                         <option value="">-- {{ __('select_class_section') }} --</option>
                                         @foreach ($classes as $class)
                                             <option value="{{ $class->id }}" data-classId="{{ $class->class_id }}">{{ $class->full_name}}</option>
@@ -31,36 +31,19 @@
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
-                                    @if(isset($exams))
-                                        <label for="">{{ __('exam') }}</label>
-                                        <select required name="exam_id" id="exam-id" class="form-control select2" style="width:100%;" tabindex="-1" aria-hidden="true">
-                                            <option value="">{{ __('select') . ' ' . __('exam') }}</option>
-                                            <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
-                                            @foreach ($exams as $data)
-                                                <option value="{{ $data->id }}" data-classId="{{$data->class_id}}"> {{ $data->name }}</option>
-                                            @endforeach
-                                        </select>
-                                    @else
-                                        <label for="">{{ __('exam') }}</label>
-                                        <select required name="exam_id" id="exam_id" class="form-control select2" style="width:100%;" tabindex="-1" aria-hidden="true">
-                                            <option value="">--- No Exams ---</option>
-                                        </select>
-                                    @endif
+                                    <label for="">{{ __('exams') }}</label>
+                                    <select required name="exam_id" id="exam_id" class="form-control select2" style="width:100%;" tabindex="-1" aria-hidden="true">
+                                        <option value="">{{ __('select') . ' ' . __('exam') }}</option>
+                                    </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label for="">{{ __('subject') }}</label>
-                                    <select name="class_subject_id" required id="class_subject_id" class="form-control">
-                                        <option value="">-- {{ __('Select Subject') }} --</option>
-                                        <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
-                                        @foreach ($exams as $exam)
-                                            @foreach($exam->timetable as $data)
-                                                <option value="{{ $data->class_subject_id }}" data-exam-id="{{ $data->exam_id }}">{{ $data->subject_with_name}}</option>
-                                            @endforeach
-                                        @endforeach
+                                    <select required name="class_subject_id" id="subject_id" class="form-control select2" style="width:100%;" tabindex="-1" aria-hidden="true">
+                                        <option value="">{{ __('select') . ' ' . __('subject')}}</option>
                                     </select>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-12">
-                                    <button type="button" id="search" class="btn btn-theme">Search</button>
+                                    <button type="button" id="search" class="btn btn-theme">{{ __('search') }}</button>
                                 </div>
                             </div>
                             <div class="show_student_list">
@@ -69,10 +52,10 @@
                                        data-click-to-select="true" data-side-pagination="server"
                                        data-pagination="false" data-page-list="[5, 10, 20, 50, 100, 200]"
                                        data-search="true" data-show-columns="true" data-show-refresh="true"
-                                       data-fixed-columns="true" data-fixed-number="2"
+                                       data-fixed-columns="false" data-fixed-number="2"
                                        data-fixed-right-number="1" data-trim-on-search="false"
                                        data-mobile-responsive="true" data-sort-name="id"
-                                       data-sort-order="desc" data-maintain-selected="true"
+                                       data-sort-order="desc" data-maintain-selected="true" data-show-export="true"
                                        data-export-data-type='all' data-export-options='{ "fileName": "exam-result-list-<?= date(' d-m-y') ?>" ,"ignoreColumn": ["operate"]}'
                                        data-query-params="uploadMarksqueryParams" data-toolbar="#toolbar" data-escape="true">
                                     <thead>
@@ -86,7 +69,11 @@
                                     </tr>
                                     </thead>
                                 </table>
-                                <input class="btn btn-theme mt-4" id="create-btn-result" type="submit" value={{ __('submit') }}>
+                                <div class="form-group mt-3">
+                                    <input class="btn btn-theme float-right ml-3" id="create-btn-result" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
+                                </div>
+                                
                             </div>
                         </form>
                     </div>

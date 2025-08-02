@@ -76,7 +76,7 @@
                             </div>
                             <div class="form-group" id="stream-wise-section-div" style="display: none;">
                                 @foreach ($streams as $stream)
-                                    <div id="{{ str_replace(" ", "-", $stream->name) }}-section-div" class="stream-divs" style="display: none;">
+                                    <div id="{{ preg_replace('/\s+/', '-', trim($stream->name)) }}-section-div" class="stream-divs" style="display: none;">
                                         <label class="mb-0 mt-3">{{ __('section').' ('.$stream->name.')'}} <span class="text-danger">*</span></label>
                                         <div class="d-flex">
                                             @foreach ($sections as $section)
@@ -100,7 +100,8 @@
                             <hr>
                             <div class="row mt-4">
                                 <div class="col-md-12 col-sm-12 col-12">
-                                    <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }}>
+                                    <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                    <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                                 </div>
                             </div>
                         </form>
@@ -118,7 +119,7 @@
                             <div class="">
 
                                 <div class="col-12 text-right d-flex justify-content-end text-right align-items-end">
-                                    <b><a href="#" class="table-list-type active mr-2" data-value="All">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-value="Trashed">{{__("Trashed")}}</a>
+                                    <b><a href="#" class="table-list-type active mr-2" data-id="0">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{__("Trashed")}}</a>
                                 </div>
                             </div>
                         </div>
@@ -134,7 +135,7 @@
                         <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                data-url="{{ route('class.show',[1]) }}" data-click-to-select="true" data-side-pagination="server"
                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
-                               data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                               data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                data-mobile-responsive="true" data-sort-name="id" data-toolbar="#toolbar" data-sort-order="desc"
                                data-maintain-selected="true" data-export-data-type='all'
@@ -149,8 +150,8 @@
                                 <th scope="col" data-field="shift.name">{{ __('Shift') }}</th>
                                 <th scope="col" data-field="include_semesters" data-formatter="yesAndNoStatusFormatter">{{ __('Semester') }}</th>
                                 <th scope="col" data-field="section_names">{{ __('section') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="false" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="false" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false">{{ __('updated_at') }}</th>
                                 <th scope="col" data-field="operate" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>

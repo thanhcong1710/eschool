@@ -16,7 +16,7 @@ class SchoolSetting extends Model {
         'type',
         'school_id'
     ];
-
+    
     public $timestamps = false;
 
     public function getDataAttribute($value) {
@@ -38,18 +38,20 @@ class SchoolSetting extends Model {
     }
 
     public function scopeOwner($query) {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
+        if (Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
-
-        if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
+        
         return $query;
     }
 }

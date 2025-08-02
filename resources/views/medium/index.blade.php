@@ -11,7 +11,6 @@
                 {{ __('manage_medium') }}
             </h3>
         </div>
-
         <div class="row">
             <div class="col-md-6 grid-margin">
                 <div class="card">
@@ -28,7 +27,7 @@
                                     {!! Form::text('name', null, ['required', 'placeholder' => __('name'), 'class' => 'form-control']) !!}
                                 </div>
                             </div>
-                            <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right" type="submit" value={{ __('submit') }}>
                         </form>
                     </div>
                 </div>
@@ -40,13 +39,13 @@
                             {{ __('list_medium') }}
                         </h4>
                         <div class="col-12 text-right">
-                            <b><a href="#" class="table-list-type active mr-2" data-value="All">{{ __('all') }}</a></b> | <a href="#" class="ml-2 table-list-type" data-value="Trashed">{{ __('Trashed') }}</a>
+                            <b><a href="#" class="table-list-type active mr-2" data-id="0">{{ __('all') }}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{ __('Trashed') }}</a>
                         </div>
                         <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                data-url="{{ route('mediums.show', [1]) }}" data-click-to-select="true"
                                data-side-pagination="server" data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
                                data-search="true" data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true"
-                               data-fixed-columns="true" data-fixed-number="2" data-fixed-right-number="1"
+                               data-fixed-columns="false" data-fixed-number="2" data-fixed-right-number="1"
                                data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
                                data-sort-order="desc" data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
                                data-export-options='{ "fileName": "medium-list-<?= date('d-m-y') ?>","ignoreColumn":["operate"]}'
@@ -56,8 +55,8 @@
                                 <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{ __('id') }}</th>
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="name">{{ __('name') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-formatter="dateTimeFormatter" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="true" data-formatter="dateTimeFormatter" data-visible="false">{{ __('updated_at') }}</th>
                                 <th data-events="mediumEvents" scope="col" data-field="operate" data-escape="false">{{ __('action') }}
                                 </th>
                             </tr>

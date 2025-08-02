@@ -3,10 +3,10 @@
 
 function fileFormatter(value, row) {
     if (row.file && row.file.length) {
-        let file_upload = "<br><h6>File Upload</h6>";
-        let youtube_link = "<br><h6>YouTube Link</h6>";
-        let video_upload = "<br><h6>Video Upload</h6>";
-        let other_link = "<br><h6>Other Link</h6>";
+        let file_upload = "<br><h6>"+window.trans["File Upload"]+"</h6>";
+        let youtube_link = "<br><h6>"+window.trans["YouTube Link"]+"</h6>";
+        let video_upload = "<br><h6>"+window.trans["Video Upload"]+"</h6>";
+        let other_link = "<br><h6>"+window.trans["Other Link"]+"</h6>";
 
         let file_upload_counter = 1;
         let youtube_link_counter = 1;
@@ -75,10 +75,38 @@ function yesAndNoStatusFormatter(value) {
     }
 }
 
+function actionColumnFormatter(value, row, index)
+{
+    if (index == 0 || index == 1) {
+        $(".fixed-table-body").css("height",'280px');
+    } else {
+        $(".fixed-table-body").css("height",'100%');
+    }
+    return '<div class="action-column-menu">'+ value +'</div>';
+}
+
+
+function packageTypeFormatter(value, row) {
+    if (typeof row.type !== 'undefined') {
+        if (row.type) {
+            return "<span class='badge badge-primary'>" + window.trans["postpaid"] + "</span>";
+        } else {
+            return "<span class='badge badge-info'>" + window.trans["prepaid"] + "</span>";
+        }    
+    } else {
+        if (row.subscription.package_type) {
+            return "<span class='badge badge-primary'>" + window.trans["postpaid"] + "</span>";
+        } else {
+            return "<span class='badge badge-info'>" + window.trans["prepaid"] + "</span>";
+        }
+    }
+    
+}
+
 function descriptionFormatter(value, row) {
     let html = '';
     if (value) {
-        html = '<div class="bootstrap-table-description" data-toggle="modal" data-target="#descriptionModal">' + value + '</div>';
+        html = '<div class="bootstrap-table-description" data-toggle="modal" data-target="#descriptionModal"><a href="javascript:void(0)">' + value + '</a></div>';
     }
     return html;
 }
@@ -127,21 +155,21 @@ function featurePermissionFormatter(value, row) {
 function subscriptionStatusFormatter(value, row) {
     // 1 => Current Cycle, 2 => Success, 3 => Over Due, 4 => Failed, 5 => Pending, 6 => Next Billing Cycle
     let html = '';
-    if (value == 1) {
+    if (value == 'Current Cycle') {
         html = "<span class='badge badge-primary'>" + window.trans["current_cycle"] + "</span>";
-    } else if (value == 2 || row.amount == 0) {
+    } else if (value == 'Paid' || row.amount == 'Paid') {
         html = "<span class='badge badge-success'>" + window.trans["paid"] + "</span>";
-    } else if (value == 3) {
+    } else if (value == 'Over Due') {
         html = "<span class='badge badge-danger-light'>" + window.trans["over_due"] + "</span>";
-    } else if (value == 4) {
+    } else if (value == 'Failed') {
         html = "<span class='badge badge-danger'>" + window.trans["failed"] + "</span>";
-    } else if (value == 5) {
+    } else if (value == 'Pending') {
         html = "<span class='badge badge-warning'>" + window.trans["pending"] + "</span>";
-    } else if (value == 6) {
+    } else if (value == 'Next Billing Cycle') {
         html = "<span class='badge badge-info'>" + window.trans["next_billing_cycle"] + "</span>";
-    } else if (value == 7) {
+    } else if (value == 'Unpaid') {
         html = "<span class='badge badge-danger'>" + window.trans["unpaid"] + "</span>";
-    } else if (value == 0) {
+    } else if (value == 'Bill Not Generated') {
         html = "<span class='badge badge-dark'>" + window.trans["bill_not_generated"] + "</span>";
     }
     return html;
@@ -159,9 +187,9 @@ function planDetailFormatter(value, row) {
 function salaryInputFormatter(value, row) {
     let html;
     if (value) {
-        html = '<input type="number" min="0" required name="basic_salary[' + row.id + ']" class="form-control" value="' + value + '">';
+        html = '<input type="number" min="0" required name="basic_salary[' + row.id + ']" class="form-control" readonly value="' + value + '">';
     } else {
-        html = '<input type="number" required min="0" name="basic_salary[' + row.id + ']" class="form-control" value="0">';
+        html = '<input type="number" required min="0" name="basic_salary[' + row.id + ']" class="form-control" readonly value="0">';
     }
     return html;
 }
@@ -169,7 +197,8 @@ function salaryInputFormatter(value, row) {
 function netSalaryInputFormatter(value, row) {
     let html = '';
     if (value) {
-        html = '<input type="number" min="0" required name="net_salary[' + row.id + ']" class="form-control" value="' + value + '">';
+        value = parseFloat(value);
+        html = '<input type="number" min="0" required name="net_salary[' + row.id + ']" class="form-control" value="' + value.toFixed(2) + '">';
     } else {
         html = '<input type="number" required min="0" name="net_salary[' + row.id + ']" class="form-control" value="0">';
     }
@@ -198,23 +227,64 @@ function assignmentSubmissionStatusFormatter(value, row) {
     let html;
     // 0 = Pending/In Review , 1 = Accepted , 2 = Rejected , 3 = Resubmitted
     if (row.status === 0) {
-        html = "<span class='badge badge-warning'>Pending</span>";
+        html = "<span class='badge badge-warning'>"+window.trans['Pending']+"</span>";
     } else if (row.status === 1) {
-        html = "<span class='badge badge-success'>Accepted</span>";
+        html = "<span class='badge badge-success'>"+window.trans['Accepted']+"</span>";
     } else if (row.status === 2) {
-        html = "<span class='badge badge-danger'>Rejected</span>";
+        html = "<span class='badge badge-danger'>"+window.trans['Rejected']+"</span>";
     } else if (row.status === 3) {
-        html = "<span class='badge badge-warning'>Resubmitted</span>";
+        html = "<span class='badge badge-warning'>"+window.trans['Resubmitted']+"</span>";
     }
     return html;
 }
 
 function imageFormatter(value) {
     if (value) {
-        return "<a data-toggle='lightbox' href='" + value + "'><img src='" + value + "' class='img-fluid'  alt='image'  onerror='onErrorImage(event)' /></a>";
+        return "<a data-toggle='lightbox' href='" + value + "'><img src='" + value + "' class=''  alt='image'  onerror='onErrorImage(event)' /></a>";
     } else {
         return '-'
     }
+}
+
+function layoutFormatter(value, row) {
+    if (value) {
+        html = "<span class='badge badge-success'>"+ window.trans['Yes'] +"</span>";
+    } else {
+        html = "<span class='badge badge-danger'>"+ window.trans['No'] +"</span>";
+    }
+    return html;
+}
+
+function studentImageFormatter(value, row) {
+    return '<input type="file" name="student_image['+row.user.id+']" accept="image/jpg,image/png,image/jpeg,image/svg">';
+}
+
+function guardianImageFormatter(value, row) {
+    return '<input type="file" name="guardian_image['+row.guardian.id+']" accept="image/jpg,image/png,image/jpeg,image/svg">';
+}
+
+function dateFormatter(value)
+{
+    if (value) {
+        return moment(value).format(date_format);
+    }
+    return '';
+}
+
+function timeFormatter(value)
+{
+    if (value) {
+        return moment(value, 'HH:mm:ss').format(time_format);
+    }
+    return '';
+}
+
+function dateTimeFormatter(value)
+{
+    if (value) {
+        return moment(value).format(date_time_format);
+    }
+    return '';
 }
 
 function schoolNameFormatter(value, row) {
@@ -239,6 +309,16 @@ function linkFormatter(value, row) {
         return "<a href='" + row.link + "' target='_blank'>" + row.link + "</a>";
     } else {
         return '-'
+    }
+}
+
+function typeFormatter(value, row) {
+    if (value == 1) {
+        return '<div class="badge badge-primary badge-pill">'+window.trans['app']+'</div>'
+    } else if(value == 2){
+        return '<div class="badge badge-info badge-pill">'+window.trans['web']+'</div>'
+    } else {
+        return '<div class="badge badge-success badge-pill">'+window.trans['both']+'</div>'
     }
 }
 
@@ -282,14 +362,15 @@ function teacherReviewFormatter(value, row) {
 }
 
 function coreSubjectFormatter(value, row) {
+    
     let core_subject_count = 1;
     let html = "<div style='line-height: 20px;'>";
     if (row.core_subjects.length) {
         $.each(row.core_subjects, function (key, row) {
-            html += core_subject_count + ". " + row.name + " - " + row.type + "<br>"
+            html += core_subject_count + ". " + row.name_with_type + "<br>"
             core_subject_count++;
         })
-    }
+    }    
     html += "</div>";
     return html;
 }
@@ -298,13 +379,13 @@ function electiveSubjectFormatter(value, row) {
     let html = "<div style='line-height: 20px;'>";
     $.each(row.elective_subject_groups, function (key, group) {
         let elective_subject_count = 1;
-        html += "<b>Group " + (key + 1) + "</b><br>";
+        html += "<b>" + window.trans['group'] +" " + (key + 1) + "</b><br>";
         $.each(group.subjects, function (key, subject) {
-            html += elective_subject_count + ". " + subject.name + " - " + subject.type + "<br>"
+            html += elective_subject_count + ". " + subject.name + " - " + window.trans[subject.type] + "<br>"
             elective_subject_count++;
         })
-        html += "<b>Total Subjects : </b>" + group.total_subjects + "<br>"
-        html += "<b>Total Selectable Subjects : </b>" + group.total_selectable_subjects + "<br><br>"
+        html += "<b>"+ window.trans['total_subjects'] +" : </b>" + group.total_subjects + "<br>"
+        html += "<b>"+ window.trans['total_selectable_subjects'] +" : </b>" + group.total_selectable_subjects + "<br><br>"
     })
     html += "</div>";
     return html;
@@ -328,7 +409,31 @@ function feesTypeFormatter(value, row) {
 
 function feesTransactionParentGateway(value, row) {
     if (row.payment_gateway == "Stripe") {
-        return "<span class='badge badge-primary'>Stripe</span>";
+        return "<span class='badge badge-primary'>"+window.trans['Stripe']+"</span>";
+    } else if (row.payment_gateway == 'Cash') {
+        return "<span class='badge badge-success'>"+window.trans['cash']+"</span>";
+    } else if (row.payment_gateway == 'Cheque') {
+        return "<span class='badge badge-info'>"+window.trans['cheque']+"</span>";
+    } else if (row.payment_gateway == 'Razorpay') {
+        return "<span class='badge badge-dark'>"+window.trans['Razorpay']+"</span>";
+    } else if (row.payment_gateway == 'Flutterwave') {
+        return "<span class='badge badge-dark'>"+window.trans['Flutterwave']+"</span>";
+    } else {
+        return "-";
+    }
+}
+
+function subscriptionTransactionParentGateway(value, row) {
+    if (row.payment_gateway == "Stripe") {
+        return "<span class='badge badge-primary'>"+window.trans['Stripe']+"</span>";
+    } else if(row.payment_gateway == 'Cash') {
+        return "<span class='badge badge-success'>"+window.trans['cash']+"</span>";
+    } else if(row.payment_gateway == 'Cheque') {
+        return "<span class='badge badge-info'>"+window.trans['cheque']+"</span>";
+    } else if(row.payment_gateway == 'Razorpay') {
+        return "<span class='badge badge-dark'>"+window.trans['Razorpay']+"</span>";
+    } else if(row.payment_gateway == 'Flutterwave') {
+        return "<span class='badge badge-dark'>"+window.trans['Flutterwave']+"</span>";
     } else {
         return "-";
     }
@@ -375,7 +480,37 @@ function answersFormatter(value, row) {
 }
 
 function bgColorFormatter(value, row) {
-    return "<p style='background-color:" + row.bg_color + "' class='color-code-box'>" + row.bg_color + "</p>";
+    // Convert bg color to RGB to check brightness
+    let color = row.bg_color;
+    let r, g, b;
+    
+    // Handle hex color
+    if (color.startsWith('#')) {
+        r = parseInt(color.substr(1,2), 16);
+        g = parseInt(color.substr(3,2), 16);
+        b = parseInt(color.substr(5,2), 16);
+    }
+    // Handle rgb/rgba color
+    else if (color.startsWith('rgb')) {
+        let nums = color.match(/\d+/g);
+        r = parseInt(nums[0]);
+        g = parseInt(nums[1]); 
+        b = parseInt(nums[2]);
+    }
+
+    // Calculate brightness using relative luminance formula
+    let brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    // Use white text for dark backgrounds, black for light
+    let textColor = brightness < 128 ? '#ffffff' : '#000000';
+
+    // Add box shadow for white/very light backgrounds
+    let boxShadow = '';
+    if (brightness > 240) { // Very light color
+        boxShadow = 'box-shadow: 0 0 3px rgba(0,0,0,0.2);';
+    }
+
+    return "<p style='background-color:" + row.bg_color + "; color:" + textColor + ";" + boxShadow + "' class='color-code-box'>" + row.bg_color + "</p>";
 }
 
 function formFieldDefaultValuesFormatter(value, row) {
@@ -410,11 +545,11 @@ function formFieldOtherValueFormatter(value, row) {
 function addRadioInputAttendance(value, row) {
     let html = "<input type='hidden' value=" + row.id + " name='attendance_data[" + row.no + "][id]'><input type='hidden' name='attendance_data[" + row.no + "][student_id]' value=" + row.user_id + ">"
     if (row.type == 1) {
-        html += '<div class="d-flex"><div class="form-check mr-2"><label class="form-check-label"><input required type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="1" checked>Present<i class="input-helper"></i></label></div><div class="form-check mr-2"><label class="form-check-label"><input type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="0">Absent<i class="input-helper"></i></label></div></div>';
+        html += '<div class="d-flex"><div class="form-check mr-2"><label class="form-check-label text-success"><input required type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="1" checked>Present<i class="input-helper"></i></label></div><div class="form-check mr-2"><label class="form-check-label text-danger"><input type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="0">Absent<i class="input-helper"></i></label></div></div>';
     } else if (row.type == 0) {
-        html += '<div class="d-flex"><div class="form-check mr-2"><label class="form-check-label"><input required type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="1">Present<i class="input-helper"></i></label></div><div class="form-check mr-2"><label class="form-check-label"><input type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="0" checked>Absent<i class="input-helper"></i></label></div></div>';
+        html += '<div class="d-flex"><div class="form-check mr-2"><label class="form-check-label text-danger"><input required type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="1">Present<i class="input-helper"></i></label></div><div class="form-check mr-2"><label class="form-check-label text-success"><input type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="0" checked>Absent<i class="input-helper"></i></label></div></div>';
     } else {
-        html += '<div class="d-flex"><div class="form-check mr-2"><label class="form-check-label"><input required type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="1" checked>Present<i class="input-helper"></i></label></div><div class="form-check"><label class="form-check-label"><input type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="0">Absent<i class="input-helper"></i></label></div></div>';
+        html += '<div class="d-flex"><div class="form-check mr-2"><label class="form-check-label"><input data-id="'+row.user_id+'" required type="radio" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="1" checked>Present<i class="input-helper"></i></label></div><div class="form-check"><label class="form-check-label text-danger"><input type="radio" data-id="'+row.user_id+'" class="type form-check-input" name="attendance_data[' + row.no + '][type]" value="0">Absent<i class="input-helper"></i></label></div></div>';
     }
     return html;
 }
@@ -454,9 +589,17 @@ function classTeacherListFormatter(value, row) {
 
 function subjectTeacherListFormatter(value, row) {
     let html = "<ol>";
-    row.subject_teachers_list.forEach(function (data) {
-        html += "<li>" + data + " </li>";
-    })
+    if (row.current_sem_subject_teachers_list.length) {
+        row.current_sem_subject_teachers_list.forEach(function (data) {
+            html += "<li>" + data + " </li>";
+        })    
+    } else 
+    {
+        row.subject_teachers_list.forEach(function (data) {
+            html += "<li>" + data + " </li>";
+        })    
+    }
+    
     html += "</ol>";
     return html;
 }
@@ -502,6 +645,8 @@ function feesPaidStatusFormatter(value, row) {
         return "<span class='badge badge-success'>" + window.trans["Success"] + "</span>"
     } else if (row.fees_status == 0) {
         return "<span class='badge badge-info'>" + window.trans["Partial Paid"] + "</span>"
+    } else if(row.fees_status == 2) {
+        return "<span class='badge badge-danger'>" + window.trans["over_due"] + "</span>"
     } else {
         return "<span class='badge badge-warning'>" + window.trans["Pending"] + "</span>";
     }
@@ -512,22 +657,30 @@ function classSubjectsDetailFormatter(value, row) {
         let html = `<table class="table table-borderless">`
         $.each(row.semesters, function (index, semester) {
 
-            let CoreSubjectsList = "";
-            // console.log(row.semester_wise_core_subjects[semester.id]);
-            if (typeof row.semester_wise_core_subjects[semester.id] !== "undefined") {
-                $.each(row.semester_wise_core_subjects[semester.id], function (index, subject) {
-                    CoreSubjectsList += (index + 1) + '. ' + subject.name_with_type + '<br>';
+            let CoreSubjectsList = '';
+            let no = 1;
+            if (typeof row.semester_wise_core_subjects !== "undefined") {
+                $.each(row.semester_wise_core_subjects, function (index, subject) {
+                    if (subject.pivot.semester_id == semester.id) {
+
+                        CoreSubjectsList += (no) + '. ' + subject.name_with_type + '<br>';
+                        no++;
+                    }
                 });
             }
 
             let ElectiveSubjectsList = "";
-            if (typeof row.semester_wise_elective_subject_groups[semester.id] !== "undefined") {
-                $.each(row.semester_wise_elective_subject_groups[semester.id], function (index, group) {
+            no = 1
+            if (typeof row.semester_wise_elective_subject_groups !== "undefined") {
+                $.each(row.semester_wise_elective_subject_groups, function (index, group) {
                     let subjectsList = ""
-                    $.each(group.subjects, function (index, subject) {
-                        subjectsList += (index + 1) + '. ' + subject.name + ' - ' + subject.type + '<br>'
-                    });
-                    ElectiveSubjectsList += '<b>' + window.trans["group"] + '</b> - ' + (index + 1) + '<br>' + subjectsList + '<b>' + window.trans["total_subjects"] + '</b> : ' + group.total_subjects + '<br> <b>' + window.trans["total_selectable_subjects"] + '</b> : ' + group.total_selectable_subjects + '<br><br>';
+                    if (group.semester_id == semester.id) {
+                        $.each(group.subjects, function (index, subject) {
+                            subjectsList += (no++) + '. ' + subject.name_with_type + '<br>'
+                                
+                        });
+                        ElectiveSubjectsList += '<b>' + window.trans["group"] + '</b> - ' + (index + 1) + '<br>' + subjectsList + '<b>' + window.trans["total_subjects"] + '</b> : ' + group.total_subjects + '<br> <b>' + window.trans["total_selectable_subjects"] + '</b> : ' + group.total_selectable_subjects + '<br><br>';
+                    }
                 });
             }
 
@@ -619,8 +772,25 @@ function shiftStatusFormatter(value, row) {
     }
 }
 
+function activeStatusFormatter(value, row) {
+    if (row.status == 1) {
+        return "<span class='badge badge-success'>" + window.trans["Active"] + "</span>";
+    } else {
+        return "<span class='badge badge-danger'>" + window.trans["Inactive"] + "</span>";
+    }
+}
+
+function verifyEmailStatusFormatter(value, row) {
+    
+    if (row.user.email_verified_at != null) {
+        return "<span class='badge badge-success'>" + window.trans["verified"] + "</span>";
+    } else {
+        return "<span class='badge badge-danger'>" + window.trans["unverified"] + "</span>";
+    }
+}
+
 function amountFormatter(value, row) {
-    return formatMoney(parseInt(value));
+    return formatMoney(parseFloat(value));
 }
 
 function totalFormatter() {
@@ -631,7 +801,7 @@ function totalAmountFormatter(data) {
     let field = this.field
     let amount = 0;
     data.map(function (row) {
-        amount += parseInt(row[field]);
+        amount += parseFloat(row[field]);
     })
     return formatMoney(amount);
 }
@@ -646,4 +816,190 @@ function feesInstallmentFormatter(value, row) {
         html += "</ol>";
     }
     return html;
+}
+
+function totalFeesFormatter(value, row)
+{
+    $('.total_fees_statistics').html(0);
+    $('.total_compulsory_fees').html(0);
+    $('.total_optional_fees').html(0);
+
+    $('.total_fees_collected').html(0);
+    $('.total_compulsory_fees_collected').html(0);
+    $('.total_optional_fees_collected').html(0);
+
+    $('.total_fees_pending').html(0);
+    $('.total_compulsory_fees_pending').html(0);
+    $('.total_optional_fees_pending').html(0);
+
+    // Total Fees
+    if (row.no.total_fees) {
+        $('.total_fees_statistics').html(row.no.total_fees ? row.no.currency_symbol+' '+amountFormatter(row.no.total_fees, null) : 0);
+    }
+
+    if (row.no.total_compulsory_fees) {
+        $('.total_compulsory_fees').html(row.no.total_compulsory_fees ? row.no.currency_symbol+' '+amountFormatter(row.no.total_compulsory_fees, null) : 0);
+    }
+
+    if (row.no.total_optional_fees) {
+        $('.total_optional_fees').html(row.no.total_optional_fees ? row.no.currency_symbol+' '+amountFormatter(row.no.total_optional_fees, null) : 0);
+    }
+    // End Total Fees
+    
+    // Collected Fees
+    if (row.no.total_fees_collected) {
+        $('.total_fees_collected').html(row.no.total_fees_collected ? row.no.currency_symbol+' '+amountFormatter(row.no.total_fees_collected, null) : 0);
+    }
+
+    if (row.no.total_compulsory_fees_collected) {
+        $('.total_compulsory_fees_collected').html(row.no.total_compulsory_fees_collected ? row.no.currency_symbol+' '+amountFormatter(row.no.total_compulsory_fees_collected, null) : 0);
+    }
+
+    if (row.no.total_optional_fees_collected) {
+        $('.total_optional_fees_collected').html(row.no.total_optional_fees_collected ? row.no.currency_symbol+' '+amountFormatter(row.no.total_optional_fees_collected, null) : 0);
+    }
+
+    // Total Pending Fees
+    let total_pending_fees = (row.no.total_fees ? parseInt(row.no.total_fees) : 0) - (row.no.total_fees_collected ? parseInt(row.no.total_fees_collected) : 0);
+
+    let total_compulsory_fees_pending = (row.no.total_compulsory_fees ? parseInt(row.no.total_compulsory_fees) : 0) - (row.no.total_compulsory_fees_collected ? parseInt(row.no.total_compulsory_fees_collected) : 0);
+
+    let total_optional_fees_pending = (row.no.total_optional_fees ? parseInt(row.no.total_optional_fees) : 0) - (row.no.total_optional_fees_collected ? parseInt(row.no.total_optional_fees_collected) : 0);
+
+
+    $('.total_fees_pending').html(row.no.currency_symbol+' '+amountFormatter(total_pending_fees, null));
+    $('.total_compulsory_fees_pending').html(row.no.currency_symbol+' '+amountFormatter(total_compulsory_fees_pending, null));
+    $('.total_optional_fees_pending').html(row.no.currency_symbol+' '+amountFormatter(total_optional_fees_pending, null));
+
+    return row.no.no;
+}
+
+
+function schoolInquiryStatusFormatter(value, row) {
+    let html;
+    // 0 = Pending/In Review , 1 = Accepted , 2 = Rejected , 3 = Resubmitted
+    if (row.status === 0) {
+        html = "<span class='badge badge-warning'>"+window.trans['Pending']+"</span>";
+    } else if (row.status === 1) {
+        html = "<span class='badge badge-success'>"+window.trans['Accepted']+"</span>";
+    } else if (row.status === 2) {
+        html = "<span class='badge badge-danger'>"+window.trans['Rejected']+"</span>";
+    }
+    return html;
+}
+function ClassSectionFormatter(value, row) {
+
+    let list = value.split(",").map((item) => {
+        if(item.length!==0) {
+            return "<li>" + item.trim() + "</li>";
+        }
+    }).join(""); 
+
+    return "<ul>" + list + "</ul>";
+}
+
+function marksSubmissionStatus(value, row) {
+    console.log(row.classSectionWiseStatus); // Debugging line
+    let html = "<div>";
+
+    if (!Array.isArray(row.classSectionWiseStatus)) {
+        console.error("classSectionWiseStatus is not an array:", row.classSectionWiseStatus);
+        return "<span style='color: red;'>Invalid data format</span>";
+    }
+
+    row.classSectionWiseStatus.forEach(function (sectionData) {
+        html += "<div style='margin-bottom: 12px;'>";
+        html += "<div style='margin-bottom:20px;'><strong style='margin-bottom: 12px;'>" + sectionData.class_section_name + "</strong></div>";
+        html += "<ol style='padding-left: 20px;'>";
+
+        sectionData.subject_wise_status.forEach(function (subjectData) {
+            const badgeClass = subjectData.status === "Submitted"
+                ? "badge-success"
+                : "badge-danger";
+
+            html += `<li style='margin-bottom: 8px;'> 
+                         ${subjectData.subject} 
+                         <span class='badge ${badgeClass}' style='padding: 4px 8px; margin-left: 8px;'>
+                             ${subjectData.status}
+                         </span>
+                     </li>`;
+        });
+
+        html += "</ol>";
+        html += "</div>";
+    });
+
+    html += "</div>";
+    return html;
+}
+
+function classSectionSubmissionStatus(value, row)
+{
+    let html = "<ol>";
+
+    row.classSectionWiseStatus.forEach(function (data) {
+        if(data.status == "Submitted") {
+            html += "<li style='margin-bottom: 8px;'>" + 
+                        data.class_section_name + 
+                        " <span class='badge badge-success' style='padding: 4px 8px; margin-left: 8px;'>" + 
+                        data.status + 
+                    "</span></li>";
+        } else {
+            html += "<li style='margin-bottom: 8px;'>" + 
+                        data.class_section_name + 
+                        " <span class='badge badge-danger' style='padding: 4px 8px; margin-left: 8px;'>" + 
+                        data.status + 
+                    "</span></li>";
+        }
+    });
+
+    html += "</ol>";
+
+    return html;
+ 
+}
+
+// Format status column with color-coded badges
+function assignElectiveSubjectStatusFormatter(value, row) {
+    row.status = row.status.toLowerCase();
+    console.log(row.status);
+    let badgeClass = 'badge-';
+    switch(row.status) {
+        case 'complete':
+            badgeClass += 'success';
+            break; 
+        case 'incomplete':
+            badgeClass += 'warning';
+            break;
+        default:
+            badgeClass += 'secondary';
+    }
+    return '<span class="badge ' + badgeClass + '">' + row.status.charAt(0).toUpperCase() + row.status.slice(1) + '</span>';
+}
+
+// Format elective subjects with better visualization
+function assignElectiveSubjectsFormatter(value, row) {
+    if (row.elective_subjects === '-') {
+        return '<span class="text-muted">' + row.elective_subjects + '</span>';
+    }
+    const subjects = row.elective_subjects.split(',');
+    const colors = ['primary', 'success', 'warning', 'info', 'danger'];
+    return subjects.map((subject, index) => {
+        if(subject.trim() !== '') {
+            return '<span class="badge badge-' + colors[index % colors.length] + ' mr-1">' + 
+                subject.trim() + 
+                ' <i class="fa fa-times text-danger" style="cursor:pointer" onclick="removeSubject(this, \'' + subject.trim() + '\', \'' + row.user_id + '\', \'' + row.student_subjects[0].class_subject_id + '\')"></i>' +
+            '</span>';
+        }
+        return '';
+    }).join(' ');
+}
+
+// Format application status
+function applicationStatusFormatter(value, row) {
+    if(row.application_status == 1){
+        return '<span class="badge badge-success">'+window.trans['accepted']+'</span>';
+    }else{
+        return '<span class="badge badge-danger">'+window.trans['rejected']+'</span>';
+    }
 }

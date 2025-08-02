@@ -13,6 +13,9 @@ class InstallKeysController extends Controller
 {
     public function __invoke(): View|Factory|Application|RedirectResponse
     {
+        if (!env('APPSECRET')) {
+            return redirect()->route('install.purchase-code.index');
+        }
         if (
             !DB::connection()->getPdo() ||
             !(new InstallServerController())->check() ||

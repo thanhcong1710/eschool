@@ -33,23 +33,35 @@ class AssignmentSubmission extends Model {
     }
 
     public function scopeOwner($query) {
-
-        if (Auth::user()->hasRole('School Admin') || Auth::user()->hasRole('Teacher')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Teacher')) {
-            $subject_teacher = Auth::user()->subjectTeachers;
-            $class_section_id = $subject_teacher->pluck('class_section_id');
-            $subject_id = $subject_teacher->pluck('subject_id');
-
-            return $query->whereHas('assignment', function ($q) use ($class_section_id, $subject_id) {
-                $q->whereIn('class_section_id', $class_section_id)->whereIn('subject_id', $subject_id);
-            });
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+        if (Auth::user()) {
+            if (Auth::user()->hasRole('School Admin')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Teacher')) {
+                // $subject_teacher = Auth::user()->subjectTeachers;
+                // $class_section_id = $subject_teacher->pluck('class_section_id');
+                // $subject_id = $subject_teacher->pluck('subject_id');
+    
+                // return $query->whereHas('assignment', function ($q) use ($class_section_id, $subject_id) {
+                //     $q->whereIn('class_section_id', $class_section_id)->whereIn('subject_id', $subject_id);
+                // });
+    
+                $teacherId = Auth::user()->id;
+                return $query->whereHas('assignment.subject_teacher', function ($query) use ($teacherId) {
+                    $query->where('teacher_id', $teacherId)
+                        ->whereColumn('class_section_id', 'assignments.class_section_id');
+                })->where('school_id',Auth::user()->school_id);
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->school_id) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
         return $query;
     }

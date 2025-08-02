@@ -6,7 +6,9 @@ use App\Repositories\ClassSection\ClassSectionInterface;
 use App\Repositories\User\UserInterface;
 use App\Repositories\UserStatusForNextCycle\UserStatusForNextCycleInterface;
 use App\Services\ResponseService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Throwable;
 
 class UserController extends Controller
 {
@@ -84,6 +86,11 @@ class UserController extends Controller
 
     public function status_change(Request $request)
     {
+        $request->validate([
+            'user_status' => 'required'
+        ],[
+            'user_status.required' => 'No records found'
+        ]);
         $data = array();
         foreach ($request->user_status as $key => $status) {
             $data[] = [
@@ -94,5 +101,25 @@ class UserController extends Controller
 
         $this->userStatus->upsert($data, ['user_id'],['user_id','status']);
         ResponseService::successResponse('Data Stored Successfully');
+    }
+
+    public function birthday($type = null)
+    {
+        try {
+            $users = $this->user->builder()->select('id','first_name','last_name','dob','image')->has('student');
+            if ($type == 'today' || $type == '') {
+                $users = $users->whereMonth('dob',Carbon::now()->format('m'))->whereDay('dob',Carbon::now()->format('d'));
+            } elseif ($type == 'this_month') {
+                $users = $users->whereMonth('dob',Carbon::now()->format('m'));
+            } else {
+                $users = $users->whereMonth('dob',Carbon::now()->addMonth()->format('m'));
+            }
+            $users = $users->get()->append(['dob_date']);
+
+            ResponseService::successResponse('Data Fetched Successfully',$users);
+        } catch (Throwable $e) {
+            ResponseService::logErrorResponse($e);
+            ResponseService::errorResponse();
+        }
     }
 }

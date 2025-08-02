@@ -11,7 +11,7 @@ class SystemSettingRepository extends BaseRepository implements SystemSettingInt
     protected string $uploadFolder = 'system-settings';
 
     public function __construct(SystemSetting $model) {
-        parent::__construct($model);
+        parent::__construct($model,'system-settings');
     }
 
     public function getSpecificData($name) {
@@ -36,7 +36,6 @@ class SystemSettingRepository extends BaseRepository implements SystemSettingInt
                 $payload[$column]['data'] = UploadService::upload($value['data'], $this->uploadFolder);
             }
         }
-        // dd($payload);
         return $this->defaultModel()->upsert($payload, $uniqueColumns, $updatingColumn);
     }
 

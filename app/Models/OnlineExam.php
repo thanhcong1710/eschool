@@ -55,33 +55,51 @@ class OnlineExam extends Model
         return $this->hasMany(OnlineExamStudentAnswer::class, 'online_exam_id');
     }
 
+    public function online_exam_commons() {
+        return $this->hasMany(OnlineExamCommon::class, 'online_exam_id');
+    }
+
     public function scopeOwner($query)
     {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
+        if (Auth::user()) {
 
-        if (Auth::user()->hasRole('School Admin')) {
-            return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Teacher')) {
-            $subjectTeacherData = SubjectTeacher::where('teacher_id',Auth::user()->id)->get();
-            $classSubjectIds = $subjectTeacherData->pluck('class_subject_id');
-            return $query->whereIn('class_subject_id',$classSubjectIds)->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')){
-            $studentAuth = Auth::user()->student;
-            $studentAuth->selectedStudentSubjects();
-            $class_subject_ids = $studentAuth->selectedStudentSubjects()->pluck('class_subject_id');
-            return $query->whereIn('class_subject_id',$class_subject_ids)->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Guardian')) {
-            $childId = request('child_id');
-            $studentAuth = Students::where('id',$childId)->first();
-            return $query->where('school_id', $studentAuth->school_id);
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Teacher')) {
+                // $subjectTeacherData = SubjectTeacher::where('teacher_id',Auth::user()->id)->get();
+                // $classSubjectIds = $subjectTeacherData->pluck('class_subject_id');
+                // return $query->whereIn('class_subject_id',$classSubjectIds)->where('school_id', Auth::user()->school_id);
+    
+                $teacherId = Auth::user()->id;
+                return $query->whereHas('subject_teacher', function ($query) use ($teacherId) {
+                    $query->where('teacher_id', $teacherId)
+                          ->whereColumn('class_section_id', 'class_section_id');
+                })->where('school_id',Auth::user()->school_id);
+                return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')){
+                $studentAuth = Auth::user()->student;
+                $studentAuth->selectedStudentSubjects();
+                $class_subject_ids = $studentAuth->selectedStudentSubjects()->pluck('class_subject_id');
+                return $query->whereIn('class_subject_id',$class_subject_ids)->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Guardian')) {
+                $childId = request('child_id');
+                $studentAuth = Students::where('id',$childId)->first();
+                return $query->where('school_id', $studentAuth->school_id);
+            }
+    
+            if (Auth::user()->school_id) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;
@@ -126,6 +144,16 @@ class OnlineExam extends Model
             return "Upcoming";
         }
         return null;
+    }
+
+    /**
+     * Get all of the subject_teacher for the Assignment
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\belongsTo
+     */
+    public function subject_teacher()
+    {
+        return $this->belongsTo(SubjectTeacher::class, 'class_subject_id','class_subject_id');
     }
 
 }

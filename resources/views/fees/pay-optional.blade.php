@@ -84,7 +84,7 @@
                                 <label for="cheque_no">{{ __('cheque_no') }} <span class="text-danger">*</span></label>
                                 <input type="number" id="cheque_no" name="cheque_no" placeholder="{{ __('cheque_no') }}" class="form-control cheque-no" required/>
                             </div>
-                            <input class="btn btn-theme" type="submit" id="pay-button" disabled value={{ __('pay') }} />
+                            <input class="btn btn-theme float-right" type="submit" id="pay-button" disabled value={{ __('pay') }} />
                         </form>
                     </div>
                 </div>
@@ -97,6 +97,7 @@
     <script>
         $('#payment-date').datepicker({
             format: "dd-mm-yyyy",
+            rtl: isRTL()
         }).datepicker("setDate", 'now');
 
         let totalAmount = 0;

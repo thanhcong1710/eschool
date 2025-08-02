@@ -86,4 +86,14 @@
             </x-installer::button>
         </div>
     </form>
+
+    <div style="color: red">
+        If you encounter an error during this step, I recommend checking the solution below first.
+    </div>
+    <div>
+        1. If you encounter an error related to incorrect database host, port, name, user, or password.
+        <div class="ml-3">
+             => Please install the <strong><i>nd_pdo_mysql</i></strong> extension on your server and try again.
+        </div>
+    </div>
 @endsection

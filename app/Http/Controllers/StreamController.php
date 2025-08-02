@@ -87,6 +87,8 @@ class StreamController extends Controller {
             }
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
+            $tempRow['created_at'] = date('d-m-Y H:i:s', strtotime($row->created_at));
+            $tempRow['updated_at'] = date('d-m-Y H:i:s', strtotime($row->updated_at));
             $tempRow['operate'] = $operate;
             $rows[] = $tempRow;
         }

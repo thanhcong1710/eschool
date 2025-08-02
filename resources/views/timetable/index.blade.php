@@ -15,7 +15,7 @@
             <div class="col-md-12 grid-margin stretch-card">
                 <div class="card">
                     <div class="card-body">
-                        <form class="edit-form timetable-settings-form" action="{{ route('timetable.settings') }}" method="POST">
+                        <form class="edit-form edit-form-without-reset timetable-settings-form" action="{{ route('timetable.settings') }}" method="POST">
                             <div class="row">
                                 <div class="form-group col-sm-12 col-md-3">
                                     <label for="starting_time">{{ __('Starting Time') }} <span class="text-danger">*</span></label>
@@ -31,7 +31,7 @@
                                     <input type="number" name="timetable_duration" id="duration" class="form-control" min="1" value="{{ $timetableData['timetable_duration'] ?? ""}}"/>
                                 </div>
                             </div>
-                            <div class="form-group">
+                            <div class="form-group text-right">
                                 <button type="submit" id="generate" class="btn btn-theme">{{__('Generate')}}</button>
                             </div>
                         </form>
@@ -49,11 +49,11 @@
                                        data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
                                        data-search="true" data-toolbar="#toolbar"
                                        data-show-columns="true" data-show-refresh="true"
-                                       data-fixed-columns="true" data-fixed-number="2"
+                                       data-fixed-columns="false" data-fixed-number="2"
                                        data-fixed-right-number="1" data-trim-on-search="false"
                                        data-mobile-responsive="true" data-sort-name="id"
                                        data-query-params="timetableQueryParams" data-sort-order="desc"
-                                       data-maintain-selected="true" data-export-data-type='all'
+                                       data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
                                        data-export-options='{ "fileName": "timetable-list-<?= date(' d-m-y') ?>" }'>
                                     <thead>
                                     <tr>

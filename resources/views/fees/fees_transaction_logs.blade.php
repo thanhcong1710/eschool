@@ -16,8 +16,8 @@
                 <div class="card">
                     <div class="card-body">
                         <div id="toolbar" class="row">
-                            <div class="col col-md-4">
-                                <label for="filter_payment_status" style="font-size: 0.86rem;width: 110px">
+                            <div class="form-group col-md-4">
+                                <label class="filter-menu" for="filter_payment_status" style="font-size: 0.86rem;width: 110px">
                                     {{ __('Payment Status') }}
                                 </label>
                                 <select name="filter_payment_status" id="filter_payment_status" class="form-control">
@@ -25,6 +25,22 @@
                                     <option value="failed">{{__('failed')}}</option>
                                     <option value="succeed">{{__('succeed')}}</option>
                                     <option value="pending">{{__('pending')}}</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group col-md-3">
+                                <label class="filter-menu" for="filter_paid_status"> {{ __('month') }} </label>
+                                {!! Form::select('month', $months, date('n'), ['class' => 'form-control paid-month','placeholder' => __('all')]) !!}
+                            </div>
+
+                            <div class="form-group col-md-3">
+                                <label class="filter-menu" for="session_year_id"> {{ __('Session Years') }} </label>
+                                <select name="session_year_id" id="filter_session_year_id" class="form-control">
+                                    @foreach ($session_year_all as $session_year)
+                                        <option value="{{ $session_year->id }}"
+                                            {{ $session_year->default ? 'selected' : '' }}> {{ $session_year->name }}
+                                        </option>
+                                    @endforeach
                                 </select>
                             </div>
                         </div>
@@ -41,7 +57,7 @@
                                data-show-export="true" data-query-params="feesPaymentTransactionQueryParams" data-escape="true">
                             <thead>
                             <tr>
-                                <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{__('id')}}</th>
+                                <th scope="col" data-field="id" data-sortable="false" data-visible="false">{{__('id')}}</th>
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="user.full_name" data-align="center">{{ __('User')}}</th>
                                 <th scope="col" data-field="amount" data-align="center">{{ __('Amount')}}</th>
@@ -49,8 +65,8 @@
                                 <th scope="col" data-field="payment_status" data-align="center" data-formatter="transactionPaymentStatus">{{ __('Payment Status') }}</th>
                                 <th scope="col" data-field="order_id" data-align="center" data-visible="false">{{ __('order_id') }}</th>
                                 <th scope="col" data-field="payment_id" data-align="center" data-visible="false">{{ __('payment_id') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="true" data-visible="false">{{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="true" data-visible="false">{{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="true">{{ __('date') }}</th>
+                                <th scope="col" data-field="updated_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false">{{ __('updated_at') }}</th>
                             </tr>
                             </thead>
                         </table>

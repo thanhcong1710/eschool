@@ -232,11 +232,12 @@ class DummyDataSeeder extends Seeder
             'tagline'          => 'Best plan for school',
             'student_charge'   => 0.025,
             'staff_charge'     => 0.025,
+            'days'             => 90,
             'status'           => 1,
             'highlight'        => 0,
         ];
 
-        $package = Package::upsert($package,['id'],['name','description','tagline','student_charge','staff_charge','status','highlight']);
+        $package = Package::upsert($package,['id'],['name','description','tagline','student_charge','staff_charge','days','status','highlight']);
 
         $features = Feature::get();
         $package_features = array();

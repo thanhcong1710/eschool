@@ -32,30 +32,32 @@ class OnlineExamStudentAnswer extends Model
 
     public function scopeOwner($query)
     {
-        if (Auth::user()->hasRole('Super Admin')) {
-            return $query;
-        }
-
-        if (Auth::user()->hasRole('School Admin')) {
-            $student = app(StudentInterface::class);
-            $subjectTeacher = app(SubjectTeacherInterface::class);
-            $classSectionId = $subjectTeacher->builder()->pluck('class_section_id');
-            $studentId = $student->builder()->whereIn('class_section_id', $classSectionId)->pluck('user_id');
-            return $query->whereIn('student_id',$studentId)->where('school_id', Auth::user()->school_id);
-            // return $query->where('school_id', Auth::user()->school_id);
-        }
-
-        if(Auth::user()->hasRole('Teacher')) {
-            $subjectTeacher = app(SubjectTeacherInterface::class);
-            $student = app(StudentInterface::class);
-            $teacherId = Auth::user()->id;
-            $classSectionId = $subjectTeacher->builder()->where('teacher_id', $teacherId)->pluck('class_section_id');
-            $studentId = $student->builder()->whereIn('class_section_id', $classSectionId)->pluck('user_id');
-            return $query->whereIn('student_id',$studentId)->where('school_id', Auth::user()->school_id);
-        }
-
-        if (Auth::user()->hasRole('Student')) {
-            return $query->where('school_id', Auth::user()->school_id);
+        if (Auth::user()) {
+            if (Auth::user()->hasRole('Super Admin')) {
+                return $query;
+            }
+    
+            if (Auth::user()->hasRole('School Admin')) {
+                $student = app(StudentInterface::class);
+                $subjectTeacher = app(SubjectTeacherInterface::class);
+                $classSectionId = $subjectTeacher->builder()->pluck('class_section_id');
+                $studentId = $student->builder()->whereIn('class_section_id', $classSectionId)->pluck('user_id');
+                return $query->whereIn('student_id',$studentId)->where('school_id', Auth::user()->school_id);
+                // return $query->where('school_id', Auth::user()->school_id);
+            }
+    
+            if(Auth::user()->hasRole('Teacher')) {
+                $subjectTeacher = app(SubjectTeacherInterface::class);
+                $student = app(StudentInterface::class);
+                $teacherId = Auth::user()->id;
+                $classSectionId = $subjectTeacher->builder()->where('teacher_id', $teacherId)->pluck('class_section_id');
+                $studentId = $student->builder()->whereIn('class_section_id', $classSectionId)->pluck('user_id');
+                return $query->whereIn('student_id',$studentId)->where('school_id', Auth::user()->school_id);
+            }
+    
+            if (Auth::user()->hasRole('Student')) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;

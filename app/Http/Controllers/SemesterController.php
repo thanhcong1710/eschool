@@ -7,6 +7,8 @@ use App\Rules\uniqueForSchool;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\ResponseService;
+use App\Services\SessionYearsTrackingsService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Throwable;
 
@@ -40,7 +42,9 @@ class SemesterController extends Controller {
             if ($checkSemester['error']) {
                 ResponseService::validationError($checkSemester['message'], $checkSemester['data']);
             }
-            $this->semester->create($request->all());
+            $semester = $this->semester->create($request->all());
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            SessionYearsTrackingsService::storeSessionYearsTracking(get_class($semester), $semester->id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
             ResponseService::successResponse('Data Stored Successfully');
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e, "Session Year Controller -> Store method");
@@ -130,6 +134,8 @@ class SemesterController extends Controller {
         ResponseService::noPermissionThenSendJson('semester-delete');
         try {
             $this->semester->deleteById($id);
+            $sessionYear = $this->cache->getDefaultSessionYear();
+            $this->sessionYearsTrackingsService->deleteSessionYearsTracking('App\Models\Semester', $id, Auth::user()->id, $sessionYear->id, Auth::user()->school_id, null);
             ResponseService::successResponse('Data Deleted Successfully');
         } catch (Throwable $e) {
             ResponseService::logErrorResponse($e, "Semester Controller -> Delete method");

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Repositories\StudentSubject\StudentSubjectInterface;
 use App\Services\CachingService;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
@@ -16,7 +17,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasPermissions;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable {
+class User extends Authenticatable implements MustVerifyEmail {
     use HasApiTokens, HasFactory, Notifiable, HasRoles, SoftDeletes, HasPermissions;
 
     /**
@@ -39,7 +40,11 @@ class User extends Authenticatable {
         'occupation',
         'reset_request',
         'status',
-        'deleted_at'
+        'deleted_at',
+        'email_verified_at',
+        'two_factor_secret',
+        'two_factor_expires_at',
+        'two_factor_enabled'
     ];
 
     protected static function boot() {
@@ -70,7 +75,7 @@ class User extends Authenticatable {
         'email_verified_at' => 'datetime',
     ];
 
-    protected $appends = ['full_name'];
+    protected $appends = ['full_name','school_names','role'];
 
     public function student() {
         return $this->hasOne(Students::class, 'user_id', 'id')->withTrashed();
@@ -103,6 +108,14 @@ class User extends Authenticatable {
 
     public function school() {
         return $this->belongsTo(School::class)->withTrashed();
+    }
+
+    public function students() {
+        return $this->hasOne(Students::class, 'user_id', 'id');
+    }
+
+    public function session_year() {
+        return $this->hasOne(SessionYear::class, 'id', 'session_year_id');
     }
 
 //    public function guardianRelationChild() {
@@ -157,8 +170,7 @@ class User extends Authenticatable {
         if ($value) {
             return url(Storage::url($value));
         }
-        return '';
-        // return url(Storage::url($value));
+        return asset('assets/dummy_logo.jpg');
     }
 
     public function getFullNameAttribute() {
@@ -212,6 +224,10 @@ class User extends Authenticatable {
         return $this->hasMany(ExamMarks::class, 'student_id', 'id');
     }
 
+    public function marks() {
+        return $this->hasMany(ExamMarks::class, 'student_id', 'id');
+    }
+
     public function online_exam_attempts() {
         return $this->hasMany(StudentOnlineExamStatus::class, 'student_id', 'id');
     }
@@ -221,9 +237,12 @@ class User extends Authenticatable {
     }
 
     public function extra_student_details() {
-        return $this->hasMany(ExtraStudentData::class, 'student_id', 'id')->withTrashed();
+        return $this->hasMany(ExtraStudentData::class, 'user_id', 'id')->withTrashed();
     }
 
+    public function extra_user_details() {
+        return $this->hasMany(ExtraStudentData::class, 'user_id', 'id')->withTrashed();
+    }
 
     public function selectedStudentSubjects() {
         $studentSubject = app(StudentSubjectInterface::class);
@@ -284,5 +303,60 @@ class User extends Authenticatable {
         }
 
         return null;
+    }
+
+    public function getDobDateAttribute()
+    {
+        return date('d - M',strtotime($this->dob));
+    }
+
+    public function getSchoolNamesAttribute() {
+        if ($this->relationLoaded('support_school')) {
+            $schools = $this->support_school->pluck('school.name')->toArray();
+            return implode(", ",$schools);
+        }
+        return '';
+    }
+
+    public function getRoleAttribute()
+    {
+        if ($this->relationLoaded('roles')) {
+            // return $this->full_name .' #'. $this->roles()->first()->name;
+            return $this->roles()->first()->name;
+            // return $this->roles()->first();
+        }
+        return '';
+    }
+
+    /**
+     * Get all of the class_teacher for the User
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function class_teacher()
+    {
+        return $this->hasMany(ClassTeacher::class, 'teacher_id');
+    }
+
+    public function getConnectionName()
+    {
+        // Replace this with your logic to determine the connection name
+        // For example, you might get it from session or config
+        return session('db_connection_name') ?? config('database.default');
+    }
+
+    /**
+     * Get all of the student_subject for the User
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function student_subject()
+    {
+        return $this->hasMany(StudentSubject::class, 'student_id');
+    }
+    
+    public function extra_user_datas()
+    {
+        return $this->hasMany(ExtraStudentData::class, 'user_id');
     }
 }

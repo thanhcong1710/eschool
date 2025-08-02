@@ -40,6 +40,10 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'school_web' => [
+            'driver' => 'session',
+            'provider' => 'school_users', // Reference to a custom provider
+        ],
     ],
 
     /*
@@ -63,6 +67,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
+        ],
+        'school_users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\User::class,
+            'connection' => 'school', // Dynamic connection for school databases
         ],
 
         // 'users' => [

@@ -32,7 +32,8 @@
                                         {!! Form::text('link', null, ['required', 'placeholder' => __('link'), 'class' => 'form-control']) !!}
                                     </div>
                                 </div>
-                                <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                                <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                             </form>
                         </div>
                     </div>
@@ -45,9 +46,6 @@
                             <h4 class="card-title">
                                 {{ __('list') . ' ' . __('guidance') }}
                             </h4>
-                            <div class="row" id="toolbar">
-
-                            </div>
                             <div class="row">
                                 <div class="col-12">
                                     <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
@@ -55,7 +53,7 @@
                                            data-side-pagination="server" data-pagination="true"
                                            data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
                                            data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true"
-                                           data-fixed-columns="true" data-fixed-number="2" data-fixed-right-number="1"
+                                           data-fixed-columns="false" data-fixed-number="2" data-fixed-right-number="1"
                                            data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
                                            data-sort-order="desc" data-maintain-selected="true"
                                            data-export-types='["txt","excel"]'
@@ -111,7 +109,7 @@
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                     </div>
                 </form>

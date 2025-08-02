@@ -25,12 +25,12 @@
                                     <input type="text" name="purchase_code" class="form-control"/>
                                 </div>
                                 <div class="form-group col-sm-12 col-md-12">
-                                    <label>{{ __('files') }} <span class="text-danger">* <small>(Only Zip File is allowed)</small></span></label>
+                                    <label>{{ __('files') }} <span class="text-danger">* <small>({{ __('Only Zip File is allowed') }})</small></span></label>
                                     <input type="file" name="file" class="form-control" multiple/>
-                                    <small class="theme-color">Your Current Version is {{isset($system_version['data']) ? $system_version['data'] :''}}, Please update nearest version here if available</small>
+                                    <small class="theme-color">{{__('Your Current Version is')}} {{isset($system_version['data']) ? $system_version['data'] :''}}, {{__('Please update nearest version here if available')}}</small>
                                 </div>
                             </div>
-                            <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right" type="submit" value={{ __('submit') }}>
                         </form>
                     </div>
                 </div>

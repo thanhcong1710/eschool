@@ -18,129 +18,99 @@
                     <div class="card-body">
                         <form id="formdata" class="create-form-without-reset" action="{{ route('system-settings.store') }}" method="POST" novalidate="novalidate" enctype="multipart/form-data">
                             @csrf
-                            {{-- System Settings --}}
-                            <div class="border border-secondary rounded-lg my-4 mx-1">
-                                <div class="col-md-12 mt-3">
-                                    <h4>{{ __('System Settings') }}</h4>
-                                </div>
-                                <div class="col-12 mb-3">
-                                    <hr class="mt-0">
-                                </div>
-                                <div class="row my-4 mx-1">
-                                    <div class="form-group col-md-4 col-sm-12">
-                                        <label for="system_name">{{ __('system_name') }} <span class="text-danger">*</span></label>
-                                        <input name="system_name" id="system_name" value="{{ $settings['system_name'] ?? '' }}" type="text" required placeholder="{{ __('system_name') }}" class="form-control"/>
-                                    </div>
-
-                                    <div class="form-group col-md-4 col-sm-12">
-                                        <label for="mobile">{{ __('mobile') }} <span class="text-danger">*</span></label>
-                                        <input name="mobile" id="mobile" value="{{ $settings['mobile'] ?? '' }}" type="number" required placeholder="{{ __('mobile') }}" class="form-control"/>
-                                    </div>
-
-                                    <div class="form-group col-md-4 col-sm-12">
-                                        <label for="tag_line">{{ __('tag_line') }} <span class="text-danger">*</span></label>
-                                        <input name="tag_line" id="tag_line" value="{{ $settings['tag_line'] ?? '' }}" type="text" required placeholder="{{ __('tag_line') }}" class="form-control"/>
-                                    </div>
-
-                                    <div class="form-group col-md-12 col-sm-12">
-                                        <label for="address">{{ __('address') }} <span class="text-danger">*</span></label>
-                                        <textarea name="address" id="address" required placeholder="{{ __('address') }}" class="form-control">{{ $settings['address'] ?? null }}</textarea>
-                                    </div>
-
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="time_zone">{{ __('time_zone') }}</label>
-                                        <select name="time_zone" id="time_zone" required class="form-control"
-                                                style="width:100%">
-                                            @foreach ($getTimezoneList as $timezone)
-                                                <option value="{{ $timezone[2] }}"{{ isset($settings['time_zone']) && $settings['time_zone'] == $timezone[2] ? 'selected' : '' }}>{{ $timezone[2] . ' - GMT ' . $timezone[1] . ' - ' . $timezone[0] }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="date_format">{{ __('date_format') }}</label>
-                                        <select name="date_format" id="date_format" required class="form-control">
-                                            @foreach ($getDateFormat as $key => $dateformat)
-                                                <option value="{{ $key }}"{{ isset($settings['date_format']) && $settings['date_format'] == $key ? 'selected' : '' }}>{{ $dateformat }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="time_format">{{ __('time_format') }}</label>
-                                        <select name="time_format" id="time_format" required class="form-control">
-                                            @foreach ($getTimeFormat as $key => $timeFormat)
-                                                <option value="{{ $key }}"{{ isset($settings['time_format']) && $settings['time_format'] == $key ? 'selected' : '' }}>{{ $timeFormat }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div class="row my-4 mx-1">
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="favicon">{{ __('favicon') }} <span class="text-danger">*</span></label>
-                                        <input type="file" name="favicon" class="file-upload-default"/>
-                                        <div class="input-group col-xs-12">
-                                            <input type="text" id="favicon" class="form-control file-upload-info" disabled="" placeholder="{{ __('favicon') }}"/>
-                                            <span class="input-group-append">
-                                                <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
-                                            </span>
-                                            <div class="col-md-12 mt-2">
-                                                <img height="50px" src='{{ $settings['favicon'] ?? '' }}' alt="">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="horizontal_logo">{{ __('horizontal_logo') }} <span class="text-danger">*</span></label>
-                                        <input type="file" name="horizontal_logo" class="file-upload-default"/>
-                                        <div class="input-group col-xs-12">
-                                            <input type="text" id="horizontal_logo" class="form-control file-upload-info" disabled="" placeholder="{{ __('horizontal_logo') }}"/>
-                                            <span class="input-group-append">
-                                                <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
-                                            </span>
-                                            <div class="col-md-12 mt-2">
-                                                <img height="50px" src='{{ $settings['horizontal_logo'] ?? '' }}' alt="">
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="vertical_logo">{{ __('vertical_logo') }} <span class="text-danger">*</span></label>
-                                        <input type="file" name="vertical_logo" class="file-upload-default"/>
-                                        <div class="input-group col-xs-12">
-                                            <input type="text" class="form-control file-upload-info" id="vertical_logo" disabled="" placeholder="{{ __('vertical_logo') }}"/>
-                                            <span class="input-group-append">
-                                                <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
-                                            </span>
-                                            <div class="col-md-12 mt-2">
-                                                <img height="50px" src='{{ $settings['vertical_logo'] ?? '' }}' alt="">
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="login_page_logo">{{ __('login_page_logo') }} <span class="text-danger">*</span></label>
-                                        <input type="file" name="login_page_logo" class="file-upload-default" />
-                                        <div class="input-group col-xs-12">
-                                            <input type="text" class="form-control file-upload-info" id="login_page_logo" disabled="" placeholder="{{ __('login_page_logo') }}" />
-                                            <span class="input-group-append">
-                                                <button class="file-upload-browse btn btn-theme" type="button">{{ __('upload') }}</button>
-                                            </span>
-                                            <div class="col-md-12 mt-2">
-                                                <img height="50px" src='{{ $settings['login_page_logo'] ?? '' }}' alt="">
-                                            </div>
-                                        </div>
-                                        <label for="theme_color">{{ __('color') }}</label>
-                                        <input name="theme_color" id="theme_color" value="{{ $settings['theme_color'] ?? '' }}" type="text" required placeholder="{{ __('color') }}" class="color-picker"/>
-                                    </div>
-
-                                </div>
-                            </div>
-                            {{-- ENd System Settings --}}
-
-                            <input class="btn btn-theme" type="submit" value="Submit">
+                            @include('settings.forms.system-settings-form')
+                            
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+@endsection
+
+@section('js')
+    <script>
+         $(document).ready(function () {
+            // set web_maintenance setting from database
+             $("#web_maintenance").prop( "checked", false );
+             if ($('#web_maintenance').val() == 1) {
+                 $("#web_maintenance").prop( "checked", true );
+             } else { 
+                 $("#web_maintenance").prop( "checked", false );
+             }
+             
+             $(document).on('change', '#web_maintenance', function () {
+                 if ($('#web_maintenance').val() == 1) {
+                     $('#web_maintenance').val(0);
+                     $('#txt_web_maintenance').val(0);
+                 } else {
+                     $('#web_maintenance').val(1);
+                     $('#txt_web_maintenance').val(1);
+                 }
+             });
+
+             // Initialize two_factor_verification state
+            if ($('#two_factor_verification').is(':checked')) {
+                $('#txt_two_factor_verification').val(1);
+                $('#two_factor_verification').prop('checked', true);
+            } else {
+                $('#txt_two_factor_verification').val(0);
+                $('#two_factor_verification').prop('checked', false);
+            }
+
+            $(document).on('change', '#two_factor_verification', function () {
+                if ($('#two_factor_verification').is(':checked')) {
+                    $('#txt_two_factor_verification').val(1);
+                    $('#two_factor_verification').prop('checked', true);
+                } else {
+                    $('#txt_two_factor_verification').val(0);
+                    $('#two_factor_verification').prop('checked', false);
+                }
+            });
+             
+             $(document).on('change', '#file_upload_size_limit', function () {                
+                $('#txt_file_upload_size_limit').val($('#file_upload_size_limit').val());
+             });
+
+            // Image preview functionality
+            $('#favicon-input').on('change', function() {
+                previewImage(this, '#favicon-preview');
+            });
+
+            $('#horizontal-logo-input').on('change', function() {
+                previewImage(this, '#horizontal-logo-preview');
+            });
+
+            $('#vertical-logo-input').on('change', function() {
+                previewImage(this, '#vertical-logo-preview');
+            });
+
+            $('#login-page-logo-input').on('change', function() {
+                previewImage(this, '#login-page-logo-preview');
+            });
+
+            function previewImage(input, previewSelector) {
+                if (input.files && input.files[0]) {
+                    var file = input.files[0];
+                    
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        $(previewSelector).attr('src', e.target.result);
+                        
+                        // Update the file name in the input field
+                        $(input).closest('.form-group').find('.file-upload-info').val(file.name);
+                    }
+                    reader.readAsDataURL(file);
+                }
+            }
+        });
+        
+        function formSuccessFunction(response) {
+            setTimeout(() => {
+                window.location.reload();
+            }, 4000);
+        }
+    </script>
 @endsection

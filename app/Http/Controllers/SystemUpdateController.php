@@ -49,25 +49,6 @@ class SystemUpdateController extends Controller {
             ResponseService::validationError($validator->errors()->first());
         }
         try {
-            $app_url = (string)url('/');
-            $app_url = preg_replace('#^https?://#i', '', $app_url);
-            $current_version = SystemSetting::where('name', 'system_version')->first()['data'];
-            $curl = curl_init();
-            curl_setopt_array($curl, array(
-                CURLOPT_URL => 'https://wrteam.in/validator/eschoolsaas_validator?purchase_code=' . $request->purchase_code . '&domain_url=' . $app_url,
-                CURLOPT_RETURNTRANSFER => true,
-                CURLOPT_MAXREDIRS      => 10,
-                CURLOPT_FOLLOWLOCATION => true,
-                CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
-                CURLOPT_CUSTOMREQUEST  => 'GET',
-            ));
-            $response = curl_exec($curl);
-            curl_close($curl);
-            $response = json_decode($response, true, 512, JSON_THROW_ON_ERROR);
-            if ($response['error']) {
-                ResponseService::errorResponse($response["message"]);
-            }
-
             if (!is_dir($this->destinationPath) && !mkdir($concurrentDirectory = $this->destinationPath, 0777, TRUE) && !is_dir($concurrentDirectory)) {
 //                sprintf('Directory "%s" was not created', $concurrentDirectory)
                 ResponseService::errorResponse("Permission Error while crating Temp Directory");
@@ -78,7 +59,7 @@ class SystemUpdateController extends Controller {
             $fileName = $zipfile->getClientOriginalName();
             $zipfile->move($this->destinationPath, $fileName);
             //This will add public in path
-            //$target_path = getcwd() . DIRECTORY_SEPARATOR;
+//$target_path = getcwd() . DIRECTORY_SEPARATOR;
 
             $target_path = base_path() . DIRECTORY_SEPARATOR;
 
@@ -107,17 +88,18 @@ class SystemUpdateController extends Controller {
 
             $version_file = require($ver_file1);
 
-            if ($current_version == $version_file['update_version']) {
-                unlink($ver_file1);
-                unlink($source_path1);
-                ResponseService::errorResponse('System is already upto date');
+            if ($current_version != $version_file['update_version']) {
+                // unlink($ver_file1);
+                // unlink($source_path1);
+                // ResponseService::errorResponse('System is already upto date');
+                if ($current_version != $version_file['current_version']) {
+                    unlink($ver_file1);
+                    unlink($source_path1);
+                    ResponseService::errorResponse($current_version . ' ' . trans('Please update nearest version first'));
+                }
             }
 
-            if ($current_version != $version_file['current_version']) {
-                unlink($ver_file1);
-                unlink($source_path1);
-                ResponseService::errorResponse($current_version . ' ' . trans('Please update nearest version first'));
-            }
+            
 
             $zip1 = new ZipArchive();
             $zipFile1 = $zip1->open($source_path1);
@@ -128,7 +110,7 @@ class SystemUpdateController extends Controller {
                 ResponseService::errorResponse('Source Code Zip Extraction Failed');
             }
 
-            $zip1->extractTo($target_path); // change this to the correct site path
+            $zip1->extractTo($target_path);
             $zip1->close();
 
             Artisan::call('migrate');
@@ -136,9 +118,56 @@ class SystemUpdateController extends Controller {
 
             unlink($source_path1);
             unlink($ver_file1);
+
             SystemSetting::where('name', 'system_version')->update([
                 'data' => $version_file['update_version']
             ]);
+
+            $wizardSettings = [
+                [
+                    'name' => 'wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'system_settings_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'notification_settings_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'email_settings_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'verify_email_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'email_template_settings_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'payment_settings_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ],
+                [
+                    'name' => 'third_party_api_settings_wizard_checkMark',
+                    'data' => 1,
+                    'type' => 'integer'
+                ]
+            ];
+    
+            SystemSetting::upsert($wizardSettings, ["name"], ["data","type"]);
+
             $this->cache->removeSystemCache(config('constants.CACHE.SYSTEM.SETTINGS'));
             ResponseService::successResponse('System Updated Successfully');
         } catch (Throwable $e) {

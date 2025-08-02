@@ -2,11 +2,17 @@
 
 namespace App\Services;
 
+use Auth;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\Facades\Image;
 
 class UploadService {
     public static function upload($requestFile, $folder) {
+        if (Auth::user() && Auth::user()->school_id) {
+            $folder = Auth::user()->school_id.'/'.$folder;
+        } else {
+            $folder = 'super-admin/'.$folder;
+        }
         $file_name = uniqid('', true) . time() . '.' . $requestFile->getClientOriginalExtension();
         if (in_array($requestFile->getClientOriginalExtension(), ['jpg', 'jpeg', 'png'])) {
             // Check the Extension should be jpg or png and do compression
@@ -25,7 +31,7 @@ class UploadService {
      * @return bool
      */
     public static function delete($image) {
-        if (Storage::disk('public')->exists($image)) {
+        if ($image && Storage::disk('public')->exists($image)) {
             return Storage::disk('public')->delete($image);
         }
 

@@ -82,6 +82,10 @@ class FeesPaid extends Model
             if (Auth::user()->hasRole('Student')) {
                 return $query->where('school_id', Auth::user()->school_id);
             }
+
+            if (Auth::user()->school_id) {
+                return $query->where('school_id', Auth::user()->school_id);
+            }
         }
 
         return $query;

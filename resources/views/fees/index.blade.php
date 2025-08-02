@@ -25,21 +25,12 @@
                                     <hr>
                                 </div>
                                 <div class="row col-12">
-
-                                    <div class="form-group col-sm-12 col-md-6 col-lg-4">
-                                        <label>{{ __('Prefix Name') }} <span class="fa fa-info-circle" data-toggle="tooltip" data-placement="right" title="{{__("Fees names will be created based on the Classes. Prefix will be appended before Class Name.eg. \"Prefix Name - Class Name\"")}}"></span></label>
-                                        {!! Form::text('name', null, ['placeholder' => __('Prefix Name'), 'class' => 'form-control']) !!}
-                                    </div>
-                                    <div class="form-group col-sm-12 col-md-6 col-lg-4">
-                                        <label>{{ __('due_date')}} <span class="text-danger">*</span></label>
-                                        {{ Form::text('due_date', null, ['class' => 'datepicker-popup-no-past form-control', 'placeholder' => __('due_date'), 'required','autocomplete'=>'off']) }}
-                                    </div>
-                                    <div class="form-group col-sm-12 col-md-6 col-lg-4">
-                                        <label>{{ __('due_charges')}} <span class="text-danger">*</span> <span class="text-info small">( {{__('in_percentage')}} )</span></label>
-                                        {{ Form::number('due_charges', null, ['class' => 'form-control', 'placeholder' => __('due_charges'), 'required', 'min' => 1]) }}
+                                    <div class="form-group col-sm-12 col-md-6 col-lg-6">
+                                        <label>{{ __('Prefix Name') }} <span class="text-danger">*</span> <span class="fa fa-info-circle" data-toggle="tooltip" data-placement="right" title="{{__("Fees names will be created based on the Classes Prefix will be appended before Class Name.eg. Prefix Name - Class Name")}}"></span></label>
+                                        {!! Form::text('name', null, ['placeholder' => __('Prefix Name'), 'class' => 'form-control','required']) !!}
                                     </div>
 
-                                    <div class="form-group col-sm-12 col-md-12 col-lg-4">
+                                    <div class="form-group col-sm-12 col-md-12 col-lg-6">
                                         <label for="class-id">{{ __('Classes') }} <span class="text-danger">*</span></label>
                                         <select name="class_id[]" id="class-id" class="class-id form-control select2-dropdown select2-hidden-accessible" tabindex="-1" aria-hidden="true" required multiple>
                                             @foreach ($classes as $item)
@@ -57,12 +48,12 @@
                             <div class="border border-secondary rounded-lg mb-2 p-2 mb-3">
                                 <div class="col-12 mt-1">
                                     <h4 class="card-title">
-                                        {{ __('Fees Type') }}
+                                        {{ __('Compulsory Fees') }}
                                     </h4>
                                     <hr>
                                 </div>
-                                <div class="fees-class-types">
-                                    <div data-repeater-list="fees_type" class="row col-12">
+                                <div class="compulsory-fees-types">
+                                    <div data-repeater-list="compulsory_fees_type" class="row col-12">
                                         <div class="row col-12 mb-3" data-repeater-item>
                                             <div class="form-group col-md-12 col-lg-4">
                                                 <select name="fees_type_id" id="fees_type_id" class="form-control fees_type" aria-label="Fees Type" required>
@@ -76,30 +67,9 @@
                                             <div class="form-group col-md-12 col-lg-3">
                                                 {!! Form::text('amount', null, ['class' => 'form-control amount','placeholder' => __('enter').' '.__('fees').' '.__('amount'),'id' => 'amount', 'required' => true, 'min' => 0, "data-convert" => "number"]) !!}
                                             </div>
-                                            <div class="form-group col-md-12 col-lg-2">
-                                                <label>{{ __('optional') }} <span class="text-danger">*</span></label>
-                                                <div>
-                                                    <div class="d-flex">
-                                                        <div class="form-check form-check-inline my-0">
-                                                            <label class="form-check-label">
-                                                                {!! Form::radio('optional', 1, false, ['class' => 'form-check-input optional_yes', 'required' => true]) !!}
-                                                                {{ __('Yes') }}
-                                                                <i class="input-helper"></i>
-                                                            </label>
-                                                        </div>
-                                                        <div class="form-check form-check-inline my-0">
-                                                            <label class="form-check-label">
-                                                                {!! Form::radio('optional', 0, true, ['class' => 'form-check-input optional_no', 'required' => true]) !!}
-                                                                {{ __('No') }}
-                                                                <i class="input-helper"></i>
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
 
                                             <div class="col-md-12 col-lg-1">
-                                                <button type="button" class="btn btn-inverse-danger mt-2 btn-icon remove-fees-type" data-repeater-delete>
+                                                <button type="button" class="btn btn-inverse-danger btn-icon remove-fees-type" data-repeater-delete>
                                                     <i class="fa fa-times"></i>
                                                 </button>
                                             </div>
@@ -114,8 +84,24 @@
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
+                                <div class="col-12 row">
+                                    <div class="form-group col-sm-12 col-md-6 col-lg-3">
+                                        <label>{{ __('due_date')}} <span class="text-danger">*</span></label>
+                                        {{ Form::text('due_date', null, ['class' => 'datepicker-popup-no-past form-control', 'placeholder' => __('due_date'), 'required','autocomplete'=>'off']) }}
+                                    </div>
+
+                                    <div class="form-group col-sm-12 col-md-6 col-lg-3">
+                                        <label>{{ __('due_charges')}} <span class="text-danger">*</span> <span class="text-info small">( {{__('in_percentage')}} )</span></label>
+                                        {{ Form::number('due_charges_percentage', null, ['id'=>'due_charges_percentage','class' => 'form-control', 'placeholder' => __('due_charges'), 'required', 'min' => 0]) }}
+                                    </div>
+
+                                    <div class="form-group col-sm-12 col-md-6 col-lg-3">
+                                        <label>{{ __('due_charges')}} <span class="text-danger">*</span> <span class="text-info small">( {{__('Amount')}} )</span></label>
+                                        {{ Form::number('due_charges_amount', null, ['id'=>'due_charges_amount','class' => 'form-control', 'placeholder' => __('due_charges'), 'required', 'min' => 0]) }}
+                                    </div>
+                                </div>
+                            </div>
                             <div class="border border-secondary rounded-lg mb-2 p-2 mb-3">
                                 <div class="col-12 mt-1">
                                     <h4 class="card-title">
@@ -145,16 +131,41 @@
                                 <div class="fees-installment-repeater" style="display: none">
                                     <div data-repeater-list="fees_installments">
                                         <div data-repeater-item class="col-12 row">
-                                            <div class="form-group col-lg-12 col-xl-4">
+                                            <div class="form-group col-lg-12 col-xl-3">
                                                 <label>{{ __('installment_name') }} <span class="text-danger">*</span></label>
                                                 {{ Form::text('name', null, ['class' => 'form-control installment-name', 'placeholder' => __('installment') . ' ' . __('name'), 'required']) }}
                                             </div>
-                                            <div class="form-group col-lg-12 col-xl-4">
+                                            <div class="form-group col-lg-12 col-xl-3">
+                                                <label>{{ __('amount') }} <span class="text-danger">*</span></label>
+                                                {{ Form::number('amount', null, ['class' => 'form-control installment-amount', 'placeholder' => __('amount'), 'required', 'min' => 0, "data-convert" => "number"]) }}
+                                            </div>
+                                            <div class="form-group col-lg-12 col-xl-3">
                                                 <label>{{ __('due_date') }} <span class="text-danger">*</span></label>
                                                 {{ Form::text('due_date', null, ['class' => 'datepicker-popup-no-past form-control installment-due-date', 'placeholder' => __('due_date'),'autocomplete'=>'off' ,'required']) }}
                                             </div>
+                                            <div class="form-group col-md-12 col-lg-2">
+                                                <label>{{ __('Due Charges Type') }} <span class="text-danger">*</span></label>
+                                                <div>
+                                                    <div class="form-check form-check-inline my-0 d-flex">
+                                                        <label class="form-check-label mr-2">
+                                                            {!! Form::radio('due_charges_type',"fixed" , false, ['class' => 'form-check-input', 'required' => true]) !!}
+                                                            {{ __('Fixed Amount') }}
+                                                            <i class="input-helper"></i>
+                                                        </label>
+                                                        <span data-toggle="tooltip" data-placement="top" title="{{__("Due Charges will be in fixed amount once the due date is passed")}}" class="fa fa-info-circle mb-2"></span>
+                                                    </div>
+                                                    <div class="form-check form-check-inline my-0 d-flex">
+                                                        <label class="form-check-label mr-2">
+                                                            {!! Form::radio('due_charges_type', "percentage", true, ['class' => 'form-check-input', 'required' => true]) !!}
+                                                            {{ __('Percentage') }}
+                                                            <i class="input-helper"></i>
+                                                        </label>
+                                                        <span data-toggle="tooltip" data-placement="top" title="{{__("Due Charges will be calculated in % on minimum Installment Amount")}}" class="fa fa-info-circle mb-2"></span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                             <div class="form-group col-lg-12 col-xl-3">
-                                                <label>{{ __('due_charges') }} <span class="text-danger">*</span><span class="text-info small">( {{__('in_percentage')}} )</span></label>
+                                                <label>{{ __('due_charges') }} <span class="text-danger">*</span><span class="text-info small"></span></label>
                                                 {!! Form::number("due_charges",null, ["class" => "installment-due-charges form-control" , "placeholder" => trans('due_charges') , "required" => true , "data-convert" => "number", "min"=>0]) !!}
                                             </div>
                                             <div class="form-group col-lg-12 col-xl-1 mt-4">
@@ -174,8 +185,50 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <div class="border border-secondary rounded-lg mb-2 p-2 mb-3">
+                                <div class="col-12 mt-1">
+                                    <h4 class="card-title">
+                                        {{ __('Optional Fees') }}
+                                    </h4>
+                                    <small class="text-danger">* {{__("Optional Fees does not support Due charges & Installment Facility")}}</small>
+                                    <hr>
+                                </div>
+                                <div class="optional-fees-types">
+                                    <div data-repeater-list="optional_fees_type" class="row col-12">
+                                        <div class="row col-12 mb-3" data-repeater-item>
+                                            <div class="form-group col-md-12 col-lg-4">
+                                                <select name="fees_type_id" id="fees_type_id" class="form-control fees_type" aria-label="Fees Type" required>
+                                                    <option value="">{{ __('Select Fees Type')}}</option>
+                                                    @foreach ($feesTypeData as $feesType)
+                                                        <option value="{{ $feesType->id }}">{{ $feesType->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="form-group col-md-12 col-lg-3">
+                                                {!! Form::text('amount', null, ['class' => 'form-control amount','placeholder' => __('enter').' '.__('fees').' '.__('amount'),'id' => 'amount', 'required' => true, 'min' => 0, "data-convert" => "number"]) !!}
+                                            </div>
+
+                                            <div class="col-md-12 col-lg-1">
+                                                <button type="button" class="btn btn-inverse-danger btn-icon remove-fees-type" data-repeater-delete>
+                                                    <i class="fa fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="col-md-4 pl-0 mb-4">
+                                            <button class="btn btn-dark btn-sm" type="button" data-repeater-create>
+                                                <i class="fa fa-plus-circle fa-3x mr-2" aria-hidden="true"></i>
+                                                {{__('Add New Data')}}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <hr>
-                            <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme float-right" type="submit" value={{ __('submit') }}>
                         </form>
                     </div>
                 </div>
@@ -186,10 +239,24 @@
                         <h4 class="card-title">
                             {{ __('List Fees')}}
                         </h4>
-                        <div class="row">
-                            <div class="col-12 text-right">
-                                <b><a href="#" class="table-list-type active mr-2" data-value="All">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-value="Trashed">{{__("Trashed")}}</a>
+
+
+                        <div class="row" id="toolbar">
+                            <div class="form-group col-sm-12 col-md-3">
+                                <label for="filter-session-year-id" class="filter-menu">{{__("session_year")}}</label>
+                                {!! Form::select('session_year_id', $sessionYear, $defaultSessionYear->id, ['class' => 'form-control', 'id' => 'filter_session_year_id']) !!}
                             </div>
+
+                            <div class="form-group col-sm-12 col-md-3">
+                                <label for="filter-medium_id" class="filter-menu">{{__("medium")}}</label>
+                                {!! Form::select('medium_id', $mediums, null, ['class' => 'form-control', 'id' => 'filter_medium_id', 'placeholder' => __('all')]) !!}
+                            </div>
+                        </div>
+                        <div class="col-12 text-right">
+                            <b><a href="#" class="table-list-type active mr-2" data-id="0">{{__('all')}}</a></b> | <a href="#" class="ml-2 table-list-type" data-id="1">{{__("Trashed")}}</a>
+                        </div>
+
+                        <div class="row">
                             <div class="col-12">
                                 <table aria-describedby="mydesc" class='table' id='table_list'
                                        data-toggle="table" data-url="{{ route('fees.show',1) }}"
@@ -198,8 +265,8 @@
                                        data-search="true" data-toolbar="#toolbar" data-show-columns="true"
                                        data-show-refresh="true" data-trim-on-search="false"
                                        data-mobile-responsive="true" data-sort-name="id" data-sort-order="desc"
-                                       data-maintain-selected="true" data-export-data-type='all'
-                                       data-query-params="queryParams" data-escape="true" data-escape-title="false">
+                                       data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
+                                       data-query-params="feesQueryParams" data-escape="true" data-escape-title="false">
                                     <thead>
                                     <tr>
                                         <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{__('id')}}</th>
@@ -208,8 +275,7 @@
                                         <th scope="col" data-field="class.full_name" data-visible="false">{{__('Class')}}</th>
                                         <th scope="col" data-field="due_date" data-sortable="true">{{__('due_date')}}</th>
                                         <th scope="col" data-field="due_charges" data-align="center">{{__('due_charges')}} <small>(%)</small></th>
-                                        {{--                                        <th scope="col" data-field="include_fee_installments" data-align="center" data-sortable="true" data-formatter="yesAndNoStatusFormatter">{{__('include_fee_installments')}}</th>--}}
-                                        <th scope="col" data-field="installments" data-sortable="true" data-formatter="feesInstallmentFormatter">{{__('Fee Installment')}}</th>
+                                        <th scope="col" data-field="installments" data-formatter="feesInstallmentFormatter">{{__('Fees Installment')}}</th>
                                         <th scope="col" data-field="fees_type" data-align="left" data-formatter="feesTypeFormatter">{{ __('Fees') }} {{__('type')}}</th>
                                         <th scope="col" data-field="compulsory_fees" data-align="center">{{ __('Compulsory Amount')}}</th>
                                         <th scope="col" data-field="total_fees" data-align="center">{{ __('Total Amount')}}</th>
@@ -228,10 +294,142 @@
 @endsection
 @section('js')
     <script>
+        $('.compulsory-fees-types').find('[data-repeater-create]').click();
+
         function successFunction() {
-            $('.fees-class-types [data-repeater-item]').slice(1).empty();
+            $('.compulsory-fees-types [data-repeater-item]').slice(1).empty();
             $('.fees-installment-repeater [data-repeater-item]').slice(0).empty();
             $('.fees-installment-repeater').hide();
         }
+
+        // Handle installment amount calculations
+        $(document).ready(function() {
+            // Function to calculate total fees amount
+            function calculateTotalAmount() {
+                let totalAmount = 0;
+                // Calculate compulsory fees
+                $('.compulsory-fees-types .amount').each(function() {
+                    let amount = parseFloat($(this).val()) || 0;
+                    totalAmount += amount;
+                });
+
+                // Calculate optional fees
+                $('.optional-fees-types .amount').each(function() {
+                    let amount = parseFloat($(this).val()) || 0;
+                    totalAmount += amount;
+                });
+                return totalAmount;
+            }
+
+            // Function to update installment amounts
+            function updateInstallmentAmounts() {
+                let totalAmount = calculateTotalAmount();
+                let $installments = $('.fees-installment-repeater [data-repeater-item]');
+                let totalInstallments = $installments.length;
+
+                if (totalInstallments === 1) {
+                    // If only one installment, set full amount
+                    $installments.find('.installment-amount').val(totalAmount.toFixed(2));
+                } else if (totalInstallments > 1) {
+                    // Calculate equal amount for first (n-1) installments
+                    let equalInstallments = totalInstallments - 1;
+                    let equalAmount = Math.floor((totalAmount / equalInstallments) * 100) / 100;
+                    
+                    // Set equal amounts for first (n-1) installments
+                    let totalEqualAmount = 0;
+                    $installments.each(function(index) {
+                        if (index < equalInstallments) {
+                            $(this).find('.installment-amount').val(equalAmount.toFixed(2));
+                            totalEqualAmount += equalAmount;
+                        }
+                    });
+                    
+                    // Last installment gets remaining balance
+                    let remainingAmount = (totalAmount - totalEqualAmount).toFixed(2);
+                    $installments.last().find('.installment-amount').val(remainingAmount);
+                }
+            }
+
+            // Function to handle dynamic installment amount changes
+            function handleInstallmentAmountChange(changedIndex) {
+                let totalAmount = calculateTotalAmount();
+                let $installments = $('.fees-installment-repeater [data-repeater-item]');
+                let totalInstallments = $installments.length;
+                
+                // Get the changed amount
+                let changedAmount = parseFloat($installments.eq(changedIndex).find('.installment-amount').val()) || 0;
+                
+                // If last installment was changed, adjust the first (n-1) installments equally
+                if (changedIndex === totalInstallments - 1) {
+                    let remainingAmount = totalAmount - changedAmount;
+                    let equalInstallments = totalInstallments - 1;
+                    let equalAmount = Math.floor((remainingAmount / equalInstallments) * 100) / 100;
+                    
+                    $installments.each(function(index) {
+                        if (index < equalInstallments) {
+                            $(this).find('.installment-amount').val(equalAmount.toFixed(2));
+                        }
+                    });
+                } else {
+                    // If any other installment was changed
+                    let totalEqualAmount = 0;
+                    let equalInstallments = totalInstallments - 1;
+                    
+                    // Calculate total of equal installments
+                    $installments.each(function(index) {
+                        if (index < equalInstallments) {
+                            let amount = parseFloat($(this).find('.installment-amount').val()) || 0;
+                            totalEqualAmount += amount;
+                        }
+                    });
+                    
+                    // Set remaining amount to last installment
+                    let remainingAmount = (totalAmount - totalEqualAmount).toFixed(2);
+                    $installments.last().find('.installment-amount').val(remainingAmount);
+                }
+            }
+
+            // Listen for changes in compulsory fees amount
+            $(document).on('input', '.compulsory-fees-types .amount', function() {
+                updateInstallmentAmounts();
+            });
+
+            // Listen for changes in optional fees amount
+            $(document).on('input', '.optional-fees-types .amount', function() {
+                updateInstallmentAmounts();
+            });
+
+            // Listen for changes in any installment amount
+            $(document).on('input', '.fees-installment-repeater [data-repeater-item] .installment-amount', function() {
+                let changedIndex = $(this).closest('[data-repeater-item]').index();
+                handleInstallmentAmountChange(changedIndex);
+            });
+
+            // Listen for installment addition
+            $(document).on('click', '#add-installment', function() {
+                setTimeout(updateInstallmentAmounts, 100);
+            });
+
+            // Listen for installment removal
+            $(document).on('click', '[data-repeater-delete]', function() {
+                setTimeout(updateInstallmentAmounts, 100);
+            });
+
+            // Handle fees installment toggle
+            $('.fees-installment-toggle').change(function() {
+                if ($(this).val() == '1') {
+                    $('.fees-installment-repeater').show();
+                    updateInstallmentAmounts();
+                } else {
+                    $('.fees-installment-repeater').hide();
+                    $('.fees-installment-repeater [data-repeater-item]').slice(0).empty();
+                }
+            });
+
+            // Initialize if installments are enabled
+            if ($('.fees-installment-toggle:checked').val() == '1') {
+                updateInstallmentAmounts();
+            }
+        });
     </script>
 @endsection

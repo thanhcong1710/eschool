@@ -16,7 +16,7 @@
         <div class="col-lg-12 grid-margin stretch-card">
             <div class="card">
                 <div class="card-body">
-                    <form class="pt-3 profile-update-form" id="edit-form" enctype="multipart/form-data" action="{{ route('auth.profile.update') }}" novalidate="novalidate">
+                    <form class="pt-3 profile-update-form edit-form-without-reset" id="edit-form" enctype="multipart/form-data" action="{{ route('auth.profile.update') }}" novalidate="novalidate">
                         @csrf
                         <div class="row">
                             <div class="form-group col-sm-12 col-md-4">
@@ -50,7 +50,7 @@
                                 </div>
                             </div>
                             <div class="form-group col-sm-12 col-md-4">
-                                <label for="image">{{ __('image') }} <span class="text-danger">*</span></label>
+                                <label for="image">{{ __('image') }}</label>
                                 <input type="file" name="image" accept="image/jpg,image/png,image/jpeg" class="file-upload-default" />
                                 <div class="input-group col-xs-12">
                                     <input type="text" id="image" class="form-control file-upload-info" disabled="" placeholder="{{ __('image') }}" required="required"/>
@@ -82,6 +82,19 @@
                                 {!! Form::textarea('permanent_address', $userData->permanent_address, ['required','placeholder' => __('permanent_address'), 'class' => 'form-control', 'id' => 'permanent_address','rows'=>2]) !!}
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="form-group col-sm-12 col-md-4">
+                                <div class="d-flex">
+                                    <div class="form-check w-fit-content">
+                                        <label class="form-check-label ml-4">
+                                            <input type="checkbox" class="form-check-input" id="two_factor_verification" name="two_factor_verification" value="0"> {{ __('two_factor_verification') }}
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        
                         <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                     </form>
                 </div>
@@ -97,6 +110,22 @@
         @if($userData->dob)
             $('.dob').val(moment("{{ $userData->dob }}" ,'YYYY-MM-DD').format('DD-MM-YYYY'))
         @endif
+
+        // two factor verification
+        if ({{ $userData->two_factor_enabled }} == 1) {
+            $('#two_factor_verification').prop('checked', true);
+            $('#two_factor_verification').val(1);
+        } else {
+            $('#two_factor_verification').prop('checked', false);
+            $('#two_factor_verification').val(0);
+        }
+
+        $('.profile-update-form').on('submit', function (e) {
+            e.preventDefault();
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        });
     });
 </script>
 @endsection

@@ -19,7 +19,7 @@ class TimetableCollection extends ResourceCollection {
                 "start_time"         => $row['start_time'],
                 "end_time"           => $row['end_time'],
                 "day"                => $row['day'],
-                "subject"            => $row['subject_teacher'] ? $row['subject_teacher']['subject'] ?? (object)[] : (object)[],
+                "subject"            => $row->subject,
                 "teacher_first_name" => $row['subject_teacher'] ? $row['subject_teacher']['teacher']['first_name'] ?? "" : "",
                 "teacher_last_name"  => $row['subject_teacher'] ? $row['subject_teacher']['teacher']['last_name'] ?? "" : "",
                 "note" => $row['note']

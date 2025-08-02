@@ -8,7 +8,7 @@
     <title>Receipt</title>
 
     <style>
-    	* {
+        * {
             font-family: DejaVu Sans, sans-serif;
         }
         .full-width-table {
@@ -107,6 +107,10 @@
         .total_paidable_amount {
             background-color: lightgray;
         }
+        .text-info {
+            color: #198ae3 !important;
+            font-size: 12px;
+        }
 
     </style>
 </head>
@@ -119,40 +123,49 @@
                     <td>
                         <div>
                             @if ($settings['horizontal_logo'])
-                                <img class="logo" src="{{ public_path('storage/' . $settings['horizontal_logo']) }}" alt="">    
+                                <img class="logo" src="{{ public_path('storage/super-admin/system-settings/' . $settings['horizontal_logo']) }}" alt="">
                             @else
                                 <img class="logo" src="{{ public_path('assets/no_image_available.jpg') }}" alt="">    
                             @endif
-                            
-                            
                         </div>
                     </td>
                     <td class="text-right">
                         <div class="">
-                            <span class="bill">{{ __('bill') }}</span><br>
+                            <span class="bill">Bill</span><br>
                             <span>#
                                 {{ date('Y', strtotime($subscriptionBill->subscription->start_date)) }}0{{ $subscriptionBill->id }}</span>
                             <br>
                             <div class="mt-1">
                                 @if ($status == 'failed')
                                     <div class="badge badge-outline-danger">
-                                        {{ __('failed') }}
+                                        {{-- {{ __('failed') }} --}}
+                                        Failed
                                     </div>
-                                @elseif($status == 'succeed' || $subscriptionBill->amount == 0)
+                                @elseif($status == 'succeed' || $subscriptionBill->amount == 0 || $subscriptionBill->subscription_bill_payment)
                                     <div class="badge badge-outline-success">
-                                        {{ __('paid') }}
+                                        {{-- {{ __('paid') }} --}}
+                                        Paid
                                     </div>
                                 @elseif($status == 'pending')
                                     <div class="badge badge-outline-warning">
-                                        {{ __('Pending') }}
+                                        {{-- {{ __('Pending') }} --}}
+                                        Pending
                                     </div>
                                 @else
                                     <div class="badge badge-outline-danger">
-                                        {{ __('unpaid') }}
+                                        {{-- {{ __('unpaid') }} --}}
+                                        Unpaid
                                     </div>
                                 @endif
                             </div>
 
+                            <div class="mt-1">
+                                @if ($subscriptionBill->transaction)
+                                    <div class="badge badge-outline-success">
+                                        {{ $subscriptionBill->transaction->payment_gateway }}
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     </td>
                 </tr>
@@ -166,21 +179,33 @@
                     </td>
                     <td class="text-right" width="300">
                         <div class="mt-3">
-                            <b>{{ __('bill_to') }} :</b>
+                            <b>Bill No. :</b>
                         </div>
                         <div class="mt-1">
                             {{ $school_settings['school_name'] }}
                         </div>
-                        <div class="mt-1">
-                            <b>{{ __('invoice_date') }} : </b>
-                            {{ $subscriptionBill->subscription->bill_date }}
+                        <div>
+                            <b>Billing Cycle :</b>
+                            {{ format_date($subscriptionBill->subscription->start_date) }} - {{ format_date($subscriptionBill->subscription->end_date) }}
                         </div>
                         <div class="mt-1">
-                            <b>{{ __('due_date') }} : </b>
-                            {{ $subscriptionBill->due_date }}
+                            <b>Invoice Date : </b>
+                            {{ format_date($subscriptionBill->subscription->bill_date) }}
                         </div>
                         <div class="mt-1">
-                            <strong>{{ __('transaction_id') }} : </strong> {{ $transaction_id ?? null }}
+                            <b>Due Date : </b>
+                            {{ format_date($subscriptionBill->due_date) }}
+                        </div>
+                        <div class="mt-1">
+                            @if ($subscriptionBill->transaction)
+                                <strong>Transaction ID : </strong> {{ $transaction_id ?? null }}
+                            @endif
+                            @if ($subscriptionBill->subscription_bill_payment)
+                                @if ($subscriptionBill->subscription_bill_payment->payment_type == 'Cheque')
+                                    <strong>Cheque No. : </strong>
+                                    {{ $subscriptionBill->subscription_bill_payment->cheque_number }}
+                                @endif
+                            @endif
                         </div>
                     </td>
                 </tr>
@@ -188,36 +213,48 @@
         </div>
 
         @php
-            $student_charges = number_format(($subscriptionBill->subscription->student_charge / $subscriptionBill->subscription->billing_cycle) * $usage_days, 4);
+            $student_charges = number_format(($subscriptionBill->subscription->student_charge / $subscriptionBill->subscription->billing_cycle) * $usage_days, 2);
 
-            $staff_charges = number_format(($subscriptionBill->subscription->staff_charge / $subscriptionBill->subscription->billing_cycle) * $usage_days, 4);
+            $staff_charges = number_format(($subscriptionBill->subscription->staff_charge / $subscriptionBill->subscription->billing_cycle) * $usage_days, 2);
 
         @endphp
         <div class="main-body mt-3">
             <table class="full-width-table bill-info">
+                @if ($subscriptionBill->subscription->package_type == 1)
                 <tr class="table-heading">
-                    <th>{{ __('plan') }}</th>
-                    <th>{{ __('user') }}</th>
-                    <th>{{ __('charges') }} ({{ $settings['currency_symbol'] }})</th>
-                    <th>{{ __('total_user') }}</th>
-                    <th>{{ __('total_amount') }} ({{ $settings['currency_symbol'] }})</th>
+                    <th>Plan</th>
+                    <th>User</th>
+                    <th>Charges ({{ $settings['currency_symbol'] }})</th>
+                    <th>Total Users</th>
+                    <th>Total Amount ({{ $settings['currency_symbol'] }})</th>
                 </tr>
                 <tr>
-                    <td rowspan="2">{{ $subscriptionBill->subscription->name }}</td>
-                    <td>{{ __('students') }}</td>
+                    <td rowspan="2">
+                        <div>
+                            {{ $subscriptionBill->subscription->name }}
+                        </div>
+                        <div class="text-info">
+                            @if ($subscriptionBill->subscription->package_type == 1)
+                                Postpaid
+                            @else
+                            Prepaid
+                            @endif
+                        </div>
+                    </td>
+                    <td>Students</td>
                     <td class="text-right">{{ $student_charges }}</td>
                     <td class="text-right">{{ $subscriptionBill->total_student }}</td>
                     <td class="text-right">
-                        {{ number_format($student_charges * $subscriptionBill->total_student, 4) }}
+                        {{ number_format($student_charges * $subscriptionBill->total_student, 2) }}
                     </td>
                 </tr>
 
                 <tr>
-                    <td>{{ __('staffs') }}</td>
+                    <td>Staffs</td>
                     <td class="text-right">{{ $staff_charges }}</td>
                     <td class="text-right">{{ $subscriptionBill->total_staff }}</td>
                     <td class="text-right">
-                        {{ number_format($staff_charges * $subscriptionBill->total_staff, 4) }}
+                        {{ number_format($staff_charges * $subscriptionBill->total_staff, 2) }}
                     </td>
 
                     @php
@@ -225,56 +262,148 @@
                     @endphp
                 </tr>
                 <tr>
-                    <th colspan="4" class="text-left">{{ __('Total User Charges') }} : </th>
+                    <th colspan="4" class="text-left"> Total User Charges : </th>
                     <th class="text-right">{{ $settings['currency_symbol'] }}
-                        {{ number_format($total_user_charges, 4) }}</th>
+                        {{ number_format($total_user_charges, 2) }}</th>
                 </tr>
+                @else
                 <tr>
-                    <th colspan="5">{{ __('addon_charges') }}</th>
-                </tr>
-                <tr class="table-heading">
-                    <th colspan="4">{{ __('addon') }}</th>
-                    <th>{{ __('Total Amount') }} ({{ $settings['currency_symbol'] }})</th>
-                </tr>
-                @php
-                    $addons_charges = 0;
-                @endphp
-                @foreach ($addons as $addon)
-                    <tr>
-                        <td colspan="4">{{ $addon->feature->name }}</td>
-                        <td class="text-right">{{ number_format($addon->price, 4) }}</td>
-                        @php
-                            $addons_charges += $addon->price;
-                        @endphp
-                    </tr>
-                @endforeach
-                <tr>
-                    <th colspan="4" class="text-left">{{ __('total_addon_charges') }} : </th>
+                    <th colspan="4" class="text-left"> Package Amount : </th>
                     <th class="text-right">{{ $settings['currency_symbol'] }}
-                        {{ number_format($addons_charges, 2) }}</th>
+                        {{ number_format($subscriptionBill->subscription->charges, 2) }}</th>
                 </tr>
-                <tr>
-                    <th colspan="4" class="text-left">{{ __('Total User Charges') }} : </th>
-                    <th class="text-right">{{ $settings['currency_symbol'] }}
-                        {{ number_format($total_user_charges, 4) }}</th>
-                </tr>
-
-                @php
-                    $total_amount = ceil($subscriptionBill->amount * 100) / 100;
-                @endphp
-                <tr>
-                    <th colspan="4" class="text-left">{{ __('total_bill_amount') }} : </th>
-                    <th class="text-right">{{ $settings['currency_symbol'] }}
-                        {{ number_format($total_amount, 2) }}</th>
-                </tr>
-
-                @if ($deafult_amount > number_format($total_amount, 2))
-                    <tr>
-                        <th colspan="4" class="text-left">{{ __('total_payable_amount') }} : </th>
-                        <th class="text-right">{{ $settings['currency_symbol'] }}
-                            {{ number_format($deafult_amount, 2) }}</th>
-                    </tr>
                 @endif
+                
+                <tr>
+                    <th colspan="5">Addon Charges</th>
+                </tr>
+                @if ($subscriptionBill->subscription->package_type == 1)
+                    {{-- Postpaid --}}
+                    <tr class="table-heading">
+                        <th colspan="4">Addon</th>
+                        <th>Total Amount ({{ $settings['currency_symbol'] }})</th>
+                    </tr>
+                    @php
+                        $addons_charges = 0;
+                    @endphp
+                    @foreach ($subscriptionBill->subscription->addons as $addon)
+                        <tr>
+                            <td colspan="4">{{ $addon->feature->name }}</td>
+                            <td class="text-right">{{ number_format($addon->price, 2) }}</td>
+                            @php
+                                $addons_charges += $addon->price;
+                            @endphp
+                        </tr>
+                    @endforeach
+                    <tr>
+                        <th colspan="4" class="text-left">Total Addon Charges : </th>
+                        <th class="text-right">{{ $settings['currency_symbol'] }}
+                            {{ number_format($addons_charges, 2) }}</th>
+                    </tr>
+                    <tr>
+                        <th colspan="4" class="text-left">Total User Charges : </th>
+                        <th class="text-right">{{ $settings['currency_symbol'] }}
+                            {{ number_format($total_user_charges, 2) }}</th>
+                    </tr>
+
+                    @php
+                        $total_amount = $subscriptionBill->amount;
+                    @endphp
+                    <tr>
+                        <th colspan="4" class="text-left">Total bill Amount : </th>
+                        <th class="text-right">{{ $settings['currency_symbol'] }}
+                            {{ number_format($total_amount, 2) }}</th>
+                    </tr>
+
+                    @if ($deafult_amount > number_format($total_amount, 2))
+                        <tr>
+                            <th colspan="4" class="text-left">Total Payable Amount : </th>
+                            <th class="text-right">{{ $settings['currency_symbol'] }}
+                                {{ number_format($deafult_amount, 2) }}</th>
+                        </tr>
+                    @endif
+                    {{-- End Postpaid --}}
+                @else
+                    {{-- Prepaid --}}
+                    <tr class="table-heading">
+                        <th colspan="3">Addon</th>
+                        <th>Status</th>
+                        <th>Total Amount ({{ $settings['currency_symbol'] }})</th>
+                    </tr>
+                    @php
+                        $addons_charges = 0;
+                    @endphp
+                    @foreach ($subscriptionBill->subscription->addons as $addon)
+                        <tr>
+                            @if ($addon->transaction)
+                                @if ($addon->transaction->payment_status == "succeed")
+                                    <td colspan="3">
+                                        <div>
+                                            {{ $addon->feature->name }}
+                                        </div>
+                                        <div class="text-info text-small">
+                                            {{ $addon->transaction->order_id }}
+                                        </div>
+                                    </td>
+                                    <td>Success</td>
+                                    <td class="text-right">{{ number_format($addon->price, 2) }}</td>
+                                    @php
+                                        $addons_charges += $addon->price;
+                                    @endphp
+                                @else
+                                    <td colspan="3">
+                                        <div>
+                                            {{ $addon->feature->name }}
+                                        </div>
+                                        <div class="text-info text-small">
+                                            {{ $addon->transaction->order_id }}
+                                        </div>
+                                    </td>
+                                    <td>{{ $addon->transaction->payment_status }}</td>
+                                    <td class="text-right">{{ number_format($addon->price, 2) }}</td>
+                                @endif
+                                
+                            @else
+                                <td colspan="3">{{ $addon->feature->name }}</td>
+                                <td>Failed</td>
+                                <td class="text-right">{{ number_format($addon->price, 2) }}</td>
+                            @endif
+                            
+                            
+                        </tr>
+                    @endforeach
+                    <tr>
+                        <th colspan="4" class="text-left">Total Addon Charges : </th>
+                        <th class="text-right">{{ $settings['currency_symbol'] }}
+                            {{ number_format($addons_charges, 2) }}</th>
+                    </tr>
+                    @php
+                        $total_amount = $subscriptionBill->amount;
+                    @endphp
+                    <tr>
+                        <th colspan="4" class="text-left">Package Amount : </th>
+                        <th class="text-right">{{ $settings['currency_symbol'] }}
+                            {{ number_format($total_amount, 2) }}</th>
+                    </tr>
+
+                    
+                    <tr>
+                        <th colspan="4" class="text-left">Total Bill Amount : </th>
+                        <th class="text-right">{{ $settings['currency_symbol'] }}
+                            {{ number_format($total_amount + $addons_charges, 2) }}</th>
+                    </tr>
+
+                    @if ($deafult_amount > number_format($total_amount, 2))
+                        <tr>
+                            <th colspan="4" class="text-left">Total Payable Amount : </th>
+                            <th class="text-right">{{ $settings['currency_symbol'] }}
+                                {{ number_format($deafult_amount, 2) }}</th>
+                        </tr>
+                    @endif
+
+                    {{-- End Prepaid --}}
+                @endif
+                
 
             </table>
         </div>

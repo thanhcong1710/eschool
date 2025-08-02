@@ -43,6 +43,8 @@ class Kernel extends HttpKernel {
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             DemoMiddleware::class,
             LanguageManager::class,
+            \App\Http\Middleware\WizardSettings::class,
+            // \App\Http\Middleware\CustomAuth::class,
         ],
 
         'api' => [
@@ -79,6 +81,12 @@ class Kernel extends HttpKernel {
         'language'           => \App\Http\Middleware\LanguageManager::class,
         'checkStudent'       => \App\Http\Middleware\CheckStudent::class,
         'checkSchoolStatus'  => \App\Http\Middleware\CheckSchoolStatus::class,
-        'status'             => \App\Http\Middleware\Status::class
+        'status'             => \App\Http\Middleware\Status::class,
+        'SwitchDatabase'             => \App\Http\Middleware\SwitchDatabase::class,
+        'APISwitchDatabase'             => \App\Http\Middleware\APISwitchDatabase::class,
+        'verifiedEmail'           => \App\Http\Middleware\MustVerifyEmail::class,
+        'CheckForMaintenanceMode'           => \App\Http\Middleware\CheckForMaintenanceMode::class,
+        '2fa' => \App\Http\Middleware\CheckTwoFactorAuthenticated::class,
+        'wizardSettings' => \App\Http\Middleware\WizardSettings::class,
     ];
 }

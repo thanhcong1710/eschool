@@ -31,16 +31,7 @@
                                     <hr class="mt-0">
                                 </div>
                                 <div class="row my-4 mx-1">
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
-                                        <label for="billing_cycle_in_days">{{ __('billing_cycle_in_days') }} <span
-                                                class="text-danger">*</span></label>
-                                        <input name="billing_cycle_in_days" id="billing_cycle_in_days"
-                                            value="{{ $settings['billing_cycle_in_days'] ?? '' }}" min="2"
-                                            type="number" required placeholder="{{ __('billing_cycle_in_days') }}"
-                                            class="form-control" />
-                                    </div>
-
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
+                                    <div class="form-group col-md-3 col-sm-12">
                                         <label for="additional_billing_days">{{ __('Additional Billing Days') }} <span
                                                 class="text-danger">*</span></label>
                                         <input name="additional_billing_days" id="additional_billing_days"
@@ -49,7 +40,7 @@
                                             class="form-control" />
                                     </div>
 
-                                    <div class="form-group col-md-6 col-lg-6 col-xl-4 col-sm-12">
+                                    <div class="form-group col-md-3 col-sm-12">
                                         <label
                                             for="current_plan_expiry_warning_days">{{ __('Current Plan Expiry Warning Days') }}
                                             <span class="text-danger">*</span></label>
@@ -115,7 +106,7 @@
                                     </div>
 
                                     <div class="form-group col-sm-12 col-md-3 mt-4">
-                                        <div class="form-group row">
+                                        <div class="form-group row ml-3">
                                             <div class="form-check col-sm-12 col-md-6 form-check-primary">
                                                 <label class="form-check-label">
                                                     <input type="radio" class="form-check-input" value="1" name="status" {{ $package ? $package->status == 1 ? 'checked' : '' : '' }}>
@@ -134,7 +125,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="col-sm-12 col-md-3 mt-4">
+                                    <div class="col-sm-12 col-md-2 mt-4">
                                         <div class="form-check">
                                             <label class="form-check-label d-inline">
                                                 {!! Form::checkbox('highlight', 1, $package ? $package->highlight : false, ['class' => 'form-check-input']) !!}
@@ -179,7 +170,8 @@
 
                             {{-- End Free trial Subscription Settings --}}
 
-                            <input class="btn btn-theme" type="submit" value="Submit">
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>

@@ -7,10 +7,6 @@
     <title>Registration Email</title>
 </head>
 <body>
-<h3>Hello {{$name}},<br>
-    Congratulations, You are registered as a Teacher in {{$school_name}}<br>
-    Here is your login credentials. <br>
-    Email:{{$email}}<br>
-    Password:{{$password}}</h3>
+    {!! htmlspecialchars_decode($email_body) !!}
 </body>
 </html>

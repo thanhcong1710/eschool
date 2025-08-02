@@ -4,6 +4,7 @@ namespace App\Repositories\SessionYear;
 
 use App\Models\SessionYear;
 use App\Repositories\Saas\SaaSRepository;
+use Illuminate\Support\Facades\DB;
 
 class SessionYearRepository extends SaaSRepository implements SessionYearInterface {
 

@@ -18,7 +18,7 @@
                         <h4 class="card-title">
                             {{ __('create') . ' ' . __('attendance') }}
                         </h4>
-                        <form action="{{ route('attendance.store') }}" class="create-form" id="formdata">
+                        <form action="{{ route('attendance.store') }}" class="create-form attendance-table" id="formdata">
                             @csrf
                             <div class="row" id="toolbar">
                                 <div class="form-group col-sm-12 col-md-4">
@@ -39,8 +39,23 @@
                                     <div class="form-check">
                                         <label class="form-check-label">
                                             <input type="checkbox" class="form-check-input" name="holiday" id="holiday" value="0">
-                                            Holiday
+                                            {{ __('holiday') }}
                                             <i class="input-helper"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-12">
+
+                                </div>
+                                <div class="form-group col-sm-12 col-md-10">
+                                    <div class="input-group mb-3">
+                                        <div class="input-group-prepend">
+                                          <div class="input-group-text">
+                                            <input type="checkbox" name="absent_notification" class="cursor-pointer" aria-label="Checkbox for following text input" id="gridCheck">
+                                          </div>
+                                        </div>
+                                        <label class="form-control cursor-pointer" for="gridCheck">
+                                            {{ __('send_a_notification_to_the_guardian_if_the_student_is_absent') }}
                                         </label>
                                     </div>
                                 </div>
@@ -52,7 +67,7 @@
                                        data-side-pagination="server" data-pagination="false"
                                        data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true" data-show-refresh="true"
                                        data-toolbar="#toolbar" data-show-columns="true" data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="roll_number"
-                                       data-sort-order="asc" data-maintain-selected="true" data-export-data-type='all'
+                                       data-sort-order="asc" data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
                                        data-export-options='{ "fileName": "attendance-<?= date('d-m-y') ?>" ,"ignoreColumn": ["operate"]}'
                                        data-query-params="attendanceQueryParams" data-escape="true">
                                     <thead>
@@ -68,7 +83,7 @@
                                     </thead>
                                 </table>
                             </div>
-                            <input class="btn btn-theme btn_attendance mt-4" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-theme btn_attendance mt-4 float-right" id="create-btn" type="submit" value={{ __('submit') }}>
                         </form>
                     </div>
                 </div>
@@ -120,19 +135,22 @@
                     showCancelButton: true,
                     confirmButtonColor: '#3085d6',
                     cancelButtonColor: '#d33',
-                    confirmButtonText: "{{ __('Yes') }}"
+                    confirmButtonText: "{{ __('Yes') }}",
+                    cancelButtonText: window.trans["Cancel"]
                 }).then((result) => {
                     if (checkBox.checked) {
                         if (result.isConfirmed == true) {
                             $("#holiday").val(3);
                             $('input[name="holiday"]').prop('checked', true);
                             $('.type').prop('required', false);
+                            $('#table_list').slideUp(500);
                         } else {
                             checkBox.checked = false;
                         }
                     } else {
                         if (result.isConfirmed == true) {
                             $("#holiday").val(0);
+                            $('#table_list').slideDown(500);
                             $('.type').prop('required', true);
                             return true;
                         } else {
@@ -149,7 +167,7 @@
             date = $('#date').val();
             class_section_id = $('#timetable_class_section').val();
             $.ajax({
-                url: "{{ url('getAttendanceData') }}",
+                url: "{{ url('attendance/getAttendanceData') }}",
                 type: "GET",
                 data: {
                     date: date,
@@ -160,13 +178,46 @@
                         $('input[name="holiday"]').attr('checked', true);
                         $("#holiday").val(3);
                         $('.type').prop('required', false);
+                        $('#table_list').slideUp(500);
                     } else {
                         $('input[name="holiday"]').attr('checked', false);
                         $("#holiday").val(0);
+                        $('#table_list').slideDown(500);
                         $('.type').prop('required', true);
                     }
                 }
             });
         });
     </script>
+
+
+{{-- =================== --}}
+
+<script>
+    let attendanceState = {};
+    // Save state when attendance changes
+    $('#table_list').on('change', 'input[type="radio"]', function () {
+        // let studentNo = $(this).attr('name').match(/\d+/)[0];
+        let studentNo = $(this).data('id');
+        // console.log($(this).data('id'));
+        let attendanceType = $(this).val();
+        attendanceState[studentNo] = attendanceType;
+    });
+    
+
+    // Initialize table and restore attendance state
+    $('#table_list').on('load-success.bs.table', function () {
+        restoreAttendanceState();
+    });
+
+    // Function to restore attendance state
+    function restoreAttendanceState() {
+        for (let studentNo in attendanceState) {
+            // $(`input[name="attendance_data[${studentNo}][type]"][value="${attendanceState[studentNo]}"]`).prop('checked', true);
+            // form-check-input
+            $(`input[type="radio"][data-id="`+studentNo+`"][value="${attendanceState[studentNo]}"]`).prop('checked', true);
+        }
+    }
+</script>
+
 @endsection

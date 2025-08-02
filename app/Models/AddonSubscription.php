@@ -19,14 +19,20 @@ class AddonSubscription extends Model
         'price',
         'start_date',
         'end_date',
-        'status'
+        'status',
+        'subscription_id',
+        'payment_transaction_id'
     ];
+    protected $connection = 'mysql';
 
     public function scopeOwner()
     {
-        if (Auth::user()->school_id) {
-            return $this->where('school_id',Auth::user()->school_id);
+        if (Auth::user()) {
+            if (Auth::user()->school_id) {
+                return $this->where('school_id',Auth::user()->school_id);
+            }    
         }
+        
         return $this;
     }
 
@@ -53,5 +59,15 @@ class AddonSubscription extends Model
     public function getDaysAttribute()
     {
         return Carbon::parse($this->start_date)->diffInDays(Carbon::parse($this->end_date));
+    }
+
+    /**
+     * Get the transaction that owns the AddonSubscription
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function transaction()
+    {
+        return $this->belongsTo(PaymentTransaction::class,'payment_transaction_id','id');
     }
 }

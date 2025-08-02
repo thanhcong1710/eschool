@@ -19,7 +19,7 @@ class StudentDataExport implements FromCollection, WithTitle, WithHeadings, Shou
     public function __construct() {
         $formFieldsInterface = app(FormFieldsInterface::class);
 //        $this->formFields = FormField::select('name', 'type', 'default_values', 'is_required')->get();
-        $this->formFields = $formFieldsInterface->all(['name', 'type', 'default_values', 'is_required']);
+        $this->formFields = $formFieldsInterface->all(['name', 'type', 'default_values', 'is_required', 'user_type']);
     }
 
     public function title(): string {
@@ -43,8 +43,10 @@ class StudentDataExport implements FromCollection, WithTitle, WithHeadings, Shou
             'guardian_mobile',
         ];
         foreach ($this->formFields as $data) {
-            if ($data->type != 'file') {
-                $columns[] = $data->name;
+            if($data->user_type == 1) {
+                if ($data->type != 'file') {
+                    $columns[] = str_replace(' ', '_', $data->name);
+                }
             }
         }
         return $columns;
@@ -79,21 +81,23 @@ class StudentDataExport implements FromCollection, WithTitle, WithHeadings, Shou
             '123456789',
         ];
         foreach ($this->formFields as $value) {
-            switch ($value->type) {
-                case 'text':
-                case 'textarea':
-                    $value->is_required == 1 ? array_push($fields, $value->type) : array_push($fields, $value->type . ' OR leave blank');
-                    break;
-                case 'number':
-                    $value->is_required == 1 ? array_push($fields, "545454") : array_push($fields, "545454 OR leave blank");
-                    break;
-                case 'dropdown':
-                case 'radio':
-                case 'checkbox':
-                    $value->is_required == 1 ? array_push($fields, '{{ Please Check the Possible Options of it }}') : array_push($fields, '{{ Please Check the Possible Options of it OR leave blank}}');
-                    break;
-                default:
-                    break;
+            if($value->user_type == 1) {
+                switch ($value->type) {
+                    case 'text':
+                    case 'textarea':
+                        $value->is_required == 1 ? array_push($fields, $value->type) : array_push($fields, $value->type . ' OR leave blank');
+                        break;
+                    case 'number':
+                        $value->is_required == 1 ? array_push($fields, "545454") : array_push($fields, "545454 OR leave blank");
+                        break;
+                    case 'dropdown':
+                    case 'radio':
+                    case 'checkbox':
+                        $value->is_required == 1 ? array_push($fields, '{{ Please Check the Possible Options of it }}') : array_push($fields, '{{ Please Check the Possible Options of it OR leave blank}}');
+                        break;
+                    default:
+                        break;
+                }
             }
         }
         return $fields;

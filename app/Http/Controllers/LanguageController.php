@@ -2,30 +2,40 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Repositories\Languages\LanguageInterface;
+use App\Repositories\SystemSetting\SystemSettingInterface;
+use App\Repositories\User\UserInterface;
 use App\Services\BootstrapTableService;
 use App\Services\CachingService;
 use App\Services\ResponseService;
+use Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Session;
+use PhpParser\Node\Stmt\TryCatch;
 use Throwable;
 
-class LanguageController extends Controller {
+class LanguageController extends Controller
+{
     private LanguageInterface $language;
     private CachingService $cache;
 
-    public function __construct(LanguageInterface $language, CachingService $cachingService) {
+    public function __construct(LanguageInterface $language, CachingService $cachingService)
+    {
         $this->language = $language;
         $this->cache = $cachingService;
     }
 
-    public function index() {
+    public function index()
+    {
         ResponseService::noPermissionThenRedirect('language-create');
         return view('settings.language_setting');
     }
 
-    public function language_sample() {
+    public function language_sample()
+    {
         ResponseService::noPermissionThenRedirect('language-create');
         $filePath = base_path("resources/lang/en.json");
         $headers = ['Content-Type: application/json'];
@@ -37,7 +47,8 @@ class LanguageController extends Controller {
         ResponseService::errorResponse();
     }
 
-    public function store(Request $request) {
+    public function store(Request $request)
+    {
         ResponseService::noPermissionThenRedirect('language-create');
         $request->validate([
             'name' => 'required',
@@ -70,7 +81,8 @@ class LanguageController extends Controller {
         }
     }
 
-    public function show() {
+    public function show()
+    {
         ResponseService::noPermissionThenRedirect('language-list');
         $offset = request('offset', 0);
         $limit = request('limit', 10);
@@ -100,9 +112,11 @@ class LanguageController extends Controller {
         $no = 1;
         foreach ($res as $row) {
             $operate = "";
+            $operate .= BootstrapTableService::editButton(route('language.update', $row->id));
+            $operate .= BootstrapTableService::button('fa fa-file', route('language.json.file',$row->code), [ 'btn-gradient-info'], ['title' => trans("file")]);
             if ($row->code != "en") {
-                $operate .= BootstrapTableService::editButton(route('language.update', $row->id));
                 $operate .= BootstrapTableService::deleteButton(route('language.destroy', $row->id));
+
             }
             $tempRow = $row->toArray();
             $tempRow['no'] = $no++;
@@ -114,11 +128,13 @@ class LanguageController extends Controller {
         return response()->json($bulkData);
     }
 
-    public function update($id, Request $request) {
+    public function update($id, Request $request)
+    {
         ResponseService::noPermissionThenRedirect('language-edit');
         $request->validate([
             'name' => 'required',
             'code' => 'required|unique:languages,code,' . $id,
+            'file' => 'required|mimes:json',
         ]);
 
         try {
@@ -137,7 +153,7 @@ class LanguageController extends Controller {
                 $file = $request->file('file');
                 $filename = $request->code . '.' . $file->getClientOriginalExtension();
                 $file->move(base_path('resources/lang/'), $filename);
-//                $language['file'] = $filename;
+                //                $language['file'] = $filename;
             }
 
             $this->language->update($id, $languageData);
@@ -148,7 +164,8 @@ class LanguageController extends Controller {
         }
     }
 
-    public function destroy($id) {
+    public function destroy($id)
+    {
         ResponseService::noPermissionThenSendJson('language-delete');
         try {
             $this->language->deleteById($id);
@@ -159,12 +176,40 @@ class LanguageController extends Controller {
         }
     }
 
-    public function set_language(Request $request) {
+    public function set_language(Request $request)
+    {
         Session::put('locale', $request->lang);
         Session::save();
         $language = $this->language->builder()->where('code', $request->lang)->first();
         Session::put('language', $language);
         app()->setLocale(Session::get('locale'));
+        
+
+        Session::put('landing_locale', $request->lang);
+        Session::save();
+        Session::put('language', $language);
+        app()->setLocale(Session::get('landing_locale'));
+
+        Cache::flush();
+        if (Auth::user()) {
+            User::where('id',Auth::user()->id)->update(['language' => $language->code]);
+        }
         return redirect()->back();
+    }
+
+    public function language_file($code = null)
+    {
+        try {
+            $filePath = base_path("resources/lang");
+            $filePath .= '/'.$code.'.json';
+            $headers = ['Content-Type: application/json'];
+            $fileName = $code.'.json';
+            if (File::exists($filePath)) {
+                return response()->download($filePath, $fileName, $headers);
+            }
+            return redirect()->back()->with('error','No file found.');
+        } catch (\Throwable $th) {
+            return redirect()->back()->with('error','No file found.');
+        }        
     }
 }

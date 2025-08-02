@@ -78,4 +78,14 @@ class CompulsoryFee extends Model
 
         return 'Online';
     }
+
+    /**
+     * Get the payment_transaction that owns the CompulsoryFee
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function payment_transaction()
+    {
+        return $this->belongsTo(PaymentTransaction::class);
+    }
 }

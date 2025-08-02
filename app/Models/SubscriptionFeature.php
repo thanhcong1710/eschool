@@ -9,6 +9,7 @@ class SubscriptionFeature extends Model
 {
     use HasFactory;
     protected $fillable = ['subscription_id','feature_id'];
+    protected $connection = 'mysql';
 
     /**
      * Get the feature that owns the SubscriptionFeature

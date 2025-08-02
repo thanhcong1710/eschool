@@ -19,27 +19,36 @@
                             {{ __('create') . ' ' . __('assignment') }}
                         </h4>
                         <form class="pt-3 add-assignment-form" id="create-form" action="{{ route('assignment.store') }}"
-                              method="POST" novalidate="novalidate" enctype="multipart/form-data">
+                              method="POST" novalidate="novalidate" enctype="multipart/form-data" data-success-function ="formSuccessFunction">
                             <div class="row">
 
-
+                                {!! Form::hidden('user_id', Auth::user()->id, ['id' => 'user_id']) !!}
                                 <div class="form-group col-sm-12 col-md-6">
-                                    <label for="class-section-id">{{ __('Class Section') }} <span class="text-danger">*</span></label>
-                                    <select name="class_section_id" id="class-section-id" class="form-control select2 online-exam-class-section-id" style="width:100%;" tabindex="-1" aria-hidden="true">
-                                        <option value="">-- {{ __('select') . ' ' . __('Class Section') }} --</option>
-                                        @foreach ($classSections as $data)
-                                            <option value="{{ $data->id }}">{{ $data->full_name }}</option>
+                                    <label>{{ __('Class') . ' ' . __('section') }} <span
+                                            class="text-danger">*</span></label>
+                                    <select name="class_section_id[]" id="class-section-id"
+                                        class="class_section_id form-control select2-dropdown select2-hidden-accessible" multiple>
+                                        {{-- <option value="">--{{ __('select_class_section') }}--</option> --}}
+                                        @foreach ($classSections as $section)
+                                            <option value="{{ $section->id }}" data-class="{{ $section->class->id }}">
+                                                {{ $section->full_name }}
+                                            </option>
                                         @endforeach
                                     </select>
+                                    <div class="form-check w-fit-content">
+                                        <label class="form-check-label user-select-none">
+                                            <input type="checkbox" class="form-check-input" id="select-all" value="1">{{__("Select All")}}
+                                        </label>
+                                    </div>
                                 </div>
 
                                 <div class="form-group col-sm-12 col-md-6">
                                     <label for="subject-id">{{ __('subject') }} <span class="text-danger">*</span></label>
-                                    <select name="class_subject_id" id="subject-id" class="form-control">
+                                    <select name="subject_id" id="subject-id" class="form-control">
                                         <option value="">-- {{ __('Select Subject') }} --</option>
                                         <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
                                         @foreach ($subjectTeachers as $item)
-                                            <option value="{{ $item->class_subject_id }}" data-class-section="{{ $item->class_section_id }}">{{ $item->subject_with_name }}</option>
+                                            <option value="{{ $item->subject_id }}" data-class-section="{{ $item->class_section_id }}" data-user="{{ Auth::user()->id }}">{{ $item->subject_with_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -56,7 +65,15 @@
 
                                 <div class="form-group col-sm-12 col-md-4">
                                     <label>{{ __('files') }} </label>
-                                    <input type="file" name="file[]" class="form-control" multiple accept="image/*,application/pdf,.doc,.docx,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"/>
+                                    <input type="file" name="file[]" class="form-control" multiple accept="image/*,application/pdf,.doc,.docx,.xml,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" value=""/>
+                                    
+                                    <div class="form-check">
+                                        <label class="form-check-label">
+                                            <input type="checkbox" class="form-check-input checkbox_add_url" name="checkbox_add_url" id="checkbox_add_url" value="">{{ __('add_url') }}
+                                        </label>
+                                    </div>
+
+                                    <input type="text" name="add_url" id="add_url" placeholder="{{ __('add_url') }}" class="form-control mt-2 add_url" value="" style="display: none;">
                                 </div>
 
                                 <div class="form-group col-sm-12 col-md-4">
@@ -87,7 +104,8 @@
 
                                 </div>
                             </div>
-                            <input class="btn btn-theme" id="create-btn" type="submit" value={{ __('submit') }} />
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -152,6 +170,17 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                @if($semesters->count() > 0)
+                                    <div class="form-group col-sm-12 col-md-3">
+                                        <label for="filter-semester-id" class="filter-menu">{{ __('Semester') }}</label>
+                                        <select name="filter-semester-id" id="filter-semester-id" class="form-control">
+                                            <option value="">{{ __('all') }}</option>
+                                            @foreach ($semesters as $semester)
+                                                <option value="{{ $semester->id }}">{{ $semester->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                @endif
                             </div>
 
                         </div>
@@ -172,18 +201,18 @@
                                 <th scope="col" data-field="name" data-sortable="false">{{ __('name') }}</th>
                                 <th scope="col" data-events="tableDescriptionEvents" data-formatter="descriptionFormatter" data-field="instructions" data-sortable="false">{{ __('instructions') }}</th>
                                 <th scope="col" data-field="file" data-sortable="false" data-formatter="fileFormatter">{{ __('files') }}</th>
-                                <th scope="col" data-field="class_section.full_name" data-sortable="false">{{ __('Class Section') }}</th>
+                                <th scope="col" data-field="class_section_with_medium" data-formatter="ClassSectionFormatter" data-sortable="false">{{ __('Class Section') }}</th>
                                 <th scope="col" data-field="class_subject.subject.name_with_type" data-sortable="false"> {{ __('subject') }}</th>
-                                <th scope="col" data-field="due_date" data-sortable="false">{{ __('due_date') }}</th>
+                                <th scope="col" data-field="due_date" data-formatter="dateTimeFormatter" data-sortable="false">{{ __('due_date') }}</th>
                                 <th scope="col" data-field="points" data-sortable="false">{{ __('points') }}
                                 </th>
                                 <th scope="col" data-field="resubmission" data-formatter="yesAndNoStatusFormatter" data-sortable="false">{{ __('resubmission') }}</th>
-                                <th scope="col" data-field="extra_days_for_resubmission" data-sortable="false">{{ __('extra_days_for_resubmission') }}</th>
+                                <th scope="col" class="text-wrap" data-field="extra_days_for_resubmission" data-sortable="false">{{ __('extra_days_for_resubmission') }}</th>
                                 <th scope="col" data-field="created_by_teacher" data-sortable="false" data-visible="true">{{ __('created_by_teacher') }}</th>
                                 <th scope="col" data-field="edited_by_teacher" data-sortable="false" data-visible="true">{{ __('edited_by_teacher') }}</th>
                                 <th scope="col" data-field="session_year_id" data-sortable="false" data-visible="false">{{ __('session_year_id') }}</th>
-                                <th scope="col" data-field="created_at" data-sortable="false" data-visible="false"> {{ __('created_at') }}</th>
-                                <th scope="col" data-field="updated_at" data-sortable="false" data-visible="false"> {{ __('updated_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateTimeFormatter" data-sortable="false" data-visible="false"> {{ __('created_at') }}</th>
+                                <th scope="col" data-field="updated_at" data-sortable="false" data-formatter="dateTimeFormatter" data-visible="false"> {{ __('updated_at') }}</th>
                                 <th scope="col" data-field="operate" data-events="assignmentEvents" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>
@@ -210,25 +239,24 @@
                             <div class="modal-body">
                                 <div class="row">
                                     <div class="form-group col-sm-12 col-md-6">
-                                        <label for="edit-class-section-id">{{ __('Class') . ' ' . __('section') }} <span class="text-danger">*</span></label>
-                                        <select name="class_section_id" id="edit-class-section-id" class="form-control select2 online-exam-class-section-id" style="width:100%;" tabindex="-1" aria-hidden="true">
-                                            <option value="">--- {{ __('select') . ' ' . __('Class Section') }} ---
-                                            </option>
-                                            @foreach ($classSections as $data)
-                                                <option value="{{ $data->id }}">{{ $data->full_name }}</option>
+                                        <label>{{ __('class_section') }}</label>
+                                        <select name="class_section_id[]" id="edit-class-section-id" class="form-control edit_class_section_id select2-dropdown select2-hidden-accessible" style="width:100%;" tabindex="-1" aria-hidden="true" multiple>
+                                            @foreach ($classSections as $item)
+                                                <option value="{{ $item->id }}" data-class="{{ $item->class->id }}">{{ $item->full_name }}</option>
                                             @endforeach
                                         </select>
                                     </div>
 
                                     <div class="form-group col-sm-12 col-md-6">
-                                        <label for="edit-subject-id">{{ __('subject') }} <span class="text-danger">*</span></label>
-                                        <select name="class_subject_id" id="edit-subject-id" class="form-control">
+                                        <label>{{ __('subject') }}</label>
+                                        <select name="subject_id" id="edit-subject-id" class="form-control edit_subject_id" style="width:100%;" tabindex="-1" aria-hidden="true">
                                             <option value="">-- {{ __('Select Subject') }} --</option>
                                             <option value="data-not-found">-- {{ __('no_data_found') }} --</option>
                                             @foreach ($subjectTeachers as $item)
-                                                <option value="{{ $item->class_subject_id }}" data-class-section="{{ $item->class_section_id }}">{{ $item->subject_with_name }}</option>
+                                                <option value="{{ $item->subject_id }}" data-class-section="{{ $item->class_section_id }}">{{ $item->subject_with_name}}</option>
                                             @endforeach
                                         </select>
+                                        {!! Form::hidden('class_subject_id',"", ["id" => "class_subject_id_value"]) !!}
                                     </div>
 
                                     <div class="form-group col-sm-12 col-md-6">
@@ -241,13 +269,21 @@
                                         <textarea id="edit_instructions" name="instructions" placeholder="{{ __('assignment_instructions') }}" class="form-control"></textarea>
                                     </div>
                                     <div class="form-group col-sm-12 col-md-3">
-                                        <label>{{ __('old_files') }} </label>
+                                        <label>{{ __('files_attachment') }} </label>
                                         <div id="old_files"></div>
                                     </div>
 
                                     <div class="form-group col-sm-12 col-md-3">
                                         <label>{{ __('upload_new_files') }} </label>
                                         <input type="file" name="file[]" class="form-control" multiple/>
+
+                                        <div class="form-check">
+                                            <label class="form-check-label">
+                                                <input type="checkbox" class="form-check-input edit_checkbox_add_url" name="checkbox_add_url" id="edit_checkbox_add_url" value="">{{ __('add_url') }}
+                                            </label>
+                                        </div>
+    
+                                        <input type="text" name="add_url" id="edit_add_url" placeholder="{{ __('add_url') }}" class="form-control mt-2 edit_add_url" value="" style="display: none;">
                                     </div>
 
                                     <div class="form-group col-sm-12 col-md-3">
@@ -257,7 +293,7 @@
                                     </div>
 
                                     <div class="form-group col-sm-12 col-md-3">
-                                        <label for="edit_points">{{ __('points') }}</label>
+                                        <label for="edit_points">{{ __('points') }}</label> <span class="text-danger">*</span>
                                         <input type="number" id="edit_points" name="points" placeholder="{{ __('points') }}" class="form-control" min="1"/>
                                     </div>
 
@@ -286,4 +322,22 @@
             </div>
         </div>
     </div>
+@endsection
+@section('script')
+    <script>
+        // Make current user ID available globally for JavaScript functions
+        window.currentUserId = {{ Auth::user()->id }};
+        
+        function formSuccessFunction(response) {
+            setTimeout(() => {
+                $('.class_section_id').val('').trigger('change');
+                $('.edit_class_section_id').val('').trigger('change');
+                $('#resubmission_allowed').prop('checked', false).trigger('change');
+                $('#edit_resubmission_allowed').prop('checked', false).trigger('change');
+                $('#extra_days_for_resubmission_div').hide();
+                $('#edit_extra_days_for_resubmission_div').hide();
+                // $('#add_url').hide().val('');
+            }, 500);
+        }
+    </script>
 @endsection

@@ -50,7 +50,8 @@
                                 </div>
                             </div>
 
-                            <input class="btn btn-theme float-right" type="submit" value="Submit">
+                            <input class="btn btn-theme float-right ml-3" id="create-btn" type="submit" value={{ __('submit') }}>
+                            <input class="btn btn-secondary float-right" type="reset" value={{ __('reset') }}>
                         </form>
                     </div>
                 </div>
@@ -69,9 +70,9 @@
                                        data-side-pagination="server" data-pagination="true"
                                        data-page-list="[5, 10, 20, 50, 100, 200,All]" data-search="true"
                                        data-toolbar="#toolbar" data-show-columns="true" data-show-refresh="true"
-                                       data-fixed-columns="true" data-fixed-number="1" data-fixed-right-number="1"
+                                       data-fixed-columns="false" data-fixed-number="1" data-fixed-right-number="1"
                                        data-trim-on-search="false" data-mobile-responsive="true" data-sort-name="id"
-                                       data-sort-order="desc" data-maintain-selected="true" data-export-data-type='all'
+                                       data-sort-order="desc" data-maintain-selected="true" data-export-data-type='all' data-show-export="true"
                                        data-export-options='{ "fileName": "language-list-<?= date('d-m-y') ?>","ignoreColumn": ["operate"]}'
                                        data-query-params="queryParams" data-escape="true">
                                     <thead>
@@ -81,7 +82,7 @@
                                         <th scope="col" data-field="name">{{ __('name') }}</th>
                                         <th scope="col" data-field="code" data-sortable="false">{{ __('code') }}</th>
                                         <th scope="col" data-field="is_rtl" data-sortable="false" data-formatter="yesAndNoStatusFormatter">{{ __('Is RTL') }}</th>
-                                        <th scope="col" data-field="status" data-sortable="false" data-visible="false">{{ __('status') }}</th>
+                                        <th scope="col" data-field="status" data-formatter="activeStatusFormatter" data-sortable="false" data-visible="false">{{ __('status') }}</th>
                                         <th data-events="languageSettingsEvents" scope="col" data-field="operate" data-escape="false">{{ __('action') }}</th>
                                     </tr>
                                     </thead>
@@ -135,14 +136,14 @@
                         </div>
                         <div class="row">
                             <div class="form-group col-sm-12 col-md-12 mx-1.5">
-                                {!! Form::checkbox('rtl', 1,false, ['required', 'id' => 'edit_rtl']) !!}
+                                {!! Form::checkbox('rtl', 1,false, ['id' => 'edit_rtl']) !!}
                                 <label for="edit_rtl">{{ __('Is RTL') }}</label>
                             </div>
                         </div>
                     </div>
                     <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                         <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
-                        <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
                     </div>
                 </form>
             </div>

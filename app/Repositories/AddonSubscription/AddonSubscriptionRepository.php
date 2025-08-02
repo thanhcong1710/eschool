@@ -19,7 +19,7 @@ class AddonSubscriptionRepository extends SaaSRepository implements AddonSubscri
         $today_date = Carbon::now()->format('Y-m-d');
         $subscription = $this->subscription->default()->first();
         if ($subscription) {
-            return $this->defaultModel()->whereDate('start_date','>=',$subscription->start_date)->whereDate('end_date',$subscription->end_date);
+            return $this->defaultModel()->where('subscription_id',$subscription->id);
         }
         return $this->defaultModel()->whereDate('start_date','<=',$today_date)->whereDate('end_date','>=',$today_date);
     }

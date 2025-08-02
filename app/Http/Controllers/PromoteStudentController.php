@@ -7,6 +7,7 @@ use App\Repositories\ClassSection\ClassSectionInterface;
 use App\Repositories\PromoteStudent\PromoteStudentInterface;
 use App\Repositories\SessionYear\SessionYearInterface;
 use App\Repositories\Student\StudentInterface;
+use App\Repositories\StudentSubject\StudentSubjectInterface;
 use App\Repositories\User\UserInterface;
 use App\Services\CachingService;
 use App\Services\ResponseService;
@@ -22,19 +23,21 @@ class PromoteStudentController extends Controller {
     private UserInterface $user;
     private PromoteStudentInterface $promoteStudent;
     private CachingService $cache;
+    private StudentSubjectInterface $studentSubject;
 
-    public function __construct(ClassSectionInterface $classSection, SessionYearInterface $sessionYear, StudentInterface $student, UserInterface $user, PromoteStudentInterface $promoteStudent, CachingService $cachingService) {
+    public function __construct(ClassSectionInterface $classSection, SessionYearInterface $sessionYear, StudentInterface $student, UserInterface $user, PromoteStudentInterface $promoteStudent, CachingService $cachingService, StudentSubjectInterface $studentSubject) {
         $this->classSection = $classSection;
         $this->sessionYear = $sessionYear;
         $this->student = $student;
         $this->user = $user;
         $this->promoteStudent = $promoteStudent;
         $this->cache = $cachingService;
+        $this->studentSubject = $studentSubject;
     }
 
     public function index() {
         ResponseService::noAnyPermissionThenRedirect(['promote-student-list','transfer-student-list']);
-        $classSections = $this->classSection->all(['*'], ['class', 'section', 'medium']);
+        $classSections = $this->classSection->all(['*'], ['class', 'section', 'medium','class.stream']);
         $sessionYears = $this->sessionYear->builder()->select(['id', 'name'])->where('default', 0)->get();
         return view('promote_student.index', compact('classSections', 'sessionYears'));
     }
@@ -79,6 +82,9 @@ class PromoteStudentController extends Controller {
                 if ($data['status'] == 0) {
                     $leftStudentSIds[] = $data['student_id'];
                 }
+
+                $promoteStudentData[$key]['current_class_section_id'] = $request->new_class_section_id;
+                $promoteStudentData[$key]['current_session_year_id'] = $request->session_year_id;
             }
             if (!empty($passStudentsIds)) {
 
@@ -179,12 +185,15 @@ class PromoteStudentController extends Controller {
         $sql = $this->student->builder()->where(['class_section_id' => $class_section_id, 'session_year_id' => $sessionYear->id])->whereHas('user', function ($query) {
             $query->where('status', 1);
         })->with('user')
-            ->when($search, function ($query) use ($search) {
+        ->where(function($q) use($search) {
+            $q->when($search, function ($query) use ($search) {
                 $query->where('id', 'LIKE', "%$search%")
                 ->orWhereHas('user',function($q) use($search){
                     $q->whereRaw("concat(users.first_name,' ',users.last_name) LIKE '%" . $search . "%'");
                 });
             });
+        });
+            
         $total = $sql->count();
         $sql->orderBy($sort, $order)->skip($offset)->take($limit);
         $res = $sql->get();
@@ -225,6 +234,16 @@ class PromoteStudentController extends Controller {
                     'class_section_id' => $request->new_class_section_id,
                     'roll_number' => (int)$roll_number_db + 1,
                 );
+            }
+
+            foreach($updateStudent as $student){
+                $user = $this->student->builder()->where('id', $student['id'])->with('user')->first();
+                $studentSubject = $this->studentSubject->builder()->where('student_id', $user->user_id)->get();
+                if($studentSubject->count() > 0){
+                    foreach($studentSubject as $subject){
+                        $subject->delete();
+                    }
+                }
             }
 
             $this->student->upsert($updateStudent,['id'],['class_section_id','roll_number']);

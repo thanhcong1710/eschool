@@ -42,7 +42,7 @@
                         <table aria-describedby="mydesc" class='table' id='table_list' data-toggle="table"
                                data-url="{{ route('leave.request.show') }}" data-click-to-select="true"
                                data-side-pagination="server" data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]"
-                               data-search="true" data-show-columns="true" data-show-refresh="true" data-fixed-columns="true"
+                               data-search="true" data-show-columns="true" data-show-refresh="true" data-fixed-columns="false"
                                data-fixed-number="2" data-fixed-right-number="1" data-trim-on-search="false"
                                data-mobile-responsive="true" data-sort-name="id" data-sort-order="desc"
                                data-maintain-selected="true" data-export-data-type='all'
@@ -54,12 +54,13 @@
                                 <th scope="col" data-field="id" data-sortable="true" data-visible="false">{{ __('id') }}</th>
                                 <th scope="col" data-field="no">{{ __('no.') }}</th>
                                 <th scope="col" data-field="user.full_name">{{ __('name') }}</th>
-                                <th scope="col" data-field="from_date">{{ __('from_date') }}</th>
-                                <th scope="col" data-field="to_date">{{ __('to_date') }}</th>
-                                <th scope="col" data-field="days">{{ __('days') }}</th>
+                                <th scope="col" data-field="from_date" data-formatter="dateFormatter">{{ __('from_date') }}</th>
+                                <th scope="col" data-field="to_date" data-formatter="dateFormatter">{{ __('to_date') }}</th>
+                                <th scope="col" data-field="days">{{ __('total') }}</th>
                                 <th scope="col" data-formatter="descriptionFormatter" data-events="tableDescriptionEvents" data-field="reason">{{ __('reason') }}</th>
+                                <th scope="col" data-formatter="fileFormatter" data-field="files">{{ __('attachments') }}</th>
                                 <th scope="col" data-formatter="leaveStatusFormatter" data-field="status">{{ __('status') }}</th>
-                                <th scope="col" data-field="created_at">{{ __('created_at') }}</th>
+                                <th scope="col" data-field="created_at" data-formatter="dateFormatter">{{ __('created_at') }}</th>
                                 <th data-events="leaveEvents" scope="col" data-field="operate" data-escape="false">{{ __('action') }}</th>
                             </tr>
                             </thead>
@@ -126,6 +127,11 @@
                                 </div>
                             </div>
 
+                            <div class="form-group col-sm-12 col-md-12">
+                                <label>{{ __('attachments') }} </label>
+                                <div id="attachment"></div>
+                            </div>
+
                             <div class="row">
                                 <div class="form-group col-sm-12 col-md-12 edit_leave_dates mt-3">
 
@@ -133,7 +139,7 @@
                             </div>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-light" data-dismiss="modal">{{ __('Cancel') }}</button>
+                            <button type="button" class="btn btn-secondary" data-dismiss="modal">{{ __('Cancel') }}</button>
                             <input class="btn btn-theme" type="submit" value={{ __('submit') }}>
                         </div>
                     </form>

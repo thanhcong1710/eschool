@@ -8,8 +8,9 @@ use JetBrains\PhpStorm\Pure;
 
 class UserRepository extends SaaSRepository implements UserInterface {
 
-    #[Pure] public function __construct(User $model) {
+    public function __construct(User $model) {
         parent::__construct($model, 'user');
+        $this->model = $model;
     }
 
     public function getTrashedAdminData($email = null) {

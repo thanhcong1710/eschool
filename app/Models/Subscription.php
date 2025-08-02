@@ -20,20 +20,27 @@ class Subscription extends Model {
         'start_date',
         'end_date',
         'billing_cycle',
+        'package_type',
+        'no_of_students',
+        'no_of_staffs',
+        'charges'
     ];
 
-    protected $appends = ['status','bill_date','due_date'];
+    protected $connection = 'mysql';
+
+    protected $appends = ['status', 'bill_date', 'due_date'];
 
     public function scopeOwner() {
 
-        if(Auth::user()->school_id){
-            return $this->where('school_id', Auth::user()->school_id);
-        }
+        if (Auth::user()) {
+            if (Auth::user()->school_id) {
+                return $this->where('school_id', Auth::user()->school_id);
+            }
 
-        if (!Auth::user()->school_id) {
-            return $this;
+            if (!Auth::user()->school_id) {
+                return $this;
+            }
         }
-
         return $this;
     }
 
@@ -47,19 +54,16 @@ class Subscription extends Model {
      *
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
      */
-    public function school()
-    {
+    public function school() {
         return $this->belongsTo(School::class)->withTrashed();
     }
 
-    public function features()
-    {
-        return $this->hasManyThrough(Feature::class, PackageFeature::class,'package_id','id','package_id','feature_id');
+    public function features() {
+        return $this->hasManyThrough(Feature::class, PackageFeature::class, 'package_id', 'id', 'package_id', 'feature_id');
     }
 
 
-    public function subscription_bill()
-    {
+    public function subscription_bill() {
         return $this->hasOne(SubscriptionBill::class);
     }
 
@@ -68,8 +72,7 @@ class Subscription extends Model {
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function subscription_feature()
-    {
+    public function subscription_feature() {
         return $this->hasMany(SubscriptionFeature::class);
     }
 
@@ -79,49 +82,52 @@ class Subscription extends Model {
         // 1 => Current Cycle, 2 => Paid, 3 => Over Due, 4 => Failed, 5 => Pending, 6 => Next Billing Cycle, 7 => Unpaid
         if ($this->start_date <= $today_date && $this->end_date >= $today_date) {
             if (!$this->subscription_bill) {
-                return 1; // Current Billing Cycle
+                return 'Current Cycle';
             }
         }
         if ($this->start_date > $today_date) {
-            return 6; // Next Billing Cycle
+            return 'Next Billing Cycle';
         }
 
-        // TODO : This subscription_bill relationship called using Lazy load which will
-        // Cause multiple query executions, so execute this only if the relationship called with Eager loading
-        if ($this->subscription_bill) {
-            if ($this->subscription_bill->transaction) {
-                if ($this->subscription_bill->transaction->payment_status == 'succeed') {
-                    return 2; // Paid
-                }
-                if ($this->subscription_bill->transaction->payment_status == 'failed') {
-                    return 4; // Failed
-                }
-                if ($this->subscription_bill->transaction->payment_status == 'pending') {
-                    return 5; // Pending
-                }
-            } else {
-                $setting = app(CachingService::class)->getSystemSettings();
-                // If bill amount is 0 then set by default as paid
-                if ($this->subscription_bill->amount == 0) {
-                    return 2;
-                }
-                if ($this->subscription_bill->due_date < $today_date) {
-                    return 3; // Overdue
+        if ($this->relationLoaded('subscription_bill')) {
+            if ($this->subscription_bill) {
+
+                if ($this->subscription_bill->transaction) {
+                    if ($this->subscription_bill->transaction->payment_status == 'succeed') {
+                        return 'Paid';
+                    }
+                    if ($this->subscription_bill->transaction->payment_status == 'failed') {
+                        return 'Failed';
+                    }
+                    if ($this->subscription_bill->transaction->payment_status == 'pending') {
+                        return 'Pending';
+                    }
                 } else {
-                    return 7; // Unpaid
+                    // If bill amount is 0 then set by default as paid
+                    if ($this->subscription_bill->amount == 0) {
+                        return 'Paid';
+                    }
+                    if ($this->subscription_bill->due_date < $today_date) {
+                        return 'Over Due';
+                    }
+                    return 'Unpaid';
                 }
             }
         }
 
-        return 0;
+        return 'Bill Not Generated';
     }
 
     public function getBillDateAttribute() {
-        return Carbon::parse($this->end_date)->addDays(1)->format('Y-m-d');
+        if ($this->relationLoaded('subscription_bill') && $this->subscription_bill) {
+            return format_date(Carbon::parse($this->subscription_bill->created_at)->format('Y-m-d'));
+        }
+        return format_date(Carbon::parse($this->end_date)->addDays(1)->format('Y-m-d'));
     }
+
     public function getDueDateAttribute() {
         $setting = app(CachingService::class)->getSystemSettings();
-        return Carbon::parse($this->end_date)->addDays($setting['additional_billing_days'])->format('Y-m-d');
+        return format_date(Carbon::parse($this->end_date)->addDays($setting['additional_billing_days'])->format('Y-m-d'));
     }
 
     public function getExtraBillingStatusAttribute() {
@@ -133,6 +139,16 @@ class Subscription extends Model {
             $status = 1;
         }
         return $status;
+    }
+
+    /**
+     * Get all of the addons for the Subscription
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function addons()
+    {
+        return $this->hasMany(AddonSubscription::class,'subscription_id');
     }
 
 }

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Repositories\Chat\ChatInterface;
+use App\Repositories\SchoolSetting\SchoolSettingInterface;
 use App\Repositories\SessionYear\SessionYearInterface;
 use App\Rules\uniqueForSchool;
 use App\Services\BootstrapTableService;
@@ -14,10 +16,14 @@ use Throwable;
 class SessionYearController extends Controller {
     private SessionYearInterface $sessionYear;
     private CachingService $cache;
+    private SchoolSettingInterface $schoolSettings;
+    private ChatInterface $chat;
 
-    public function __construct(SessionYearInterface $sessionYear, CachingService $cache) {
+    public function __construct(SessionYearInterface $sessionYear, CachingService $cache, SchoolSettingInterface $schoolSettings, ChatInterface $chat) {
         $this->sessionYear = $sessionYear;
         $this->cache = $cache;
+        $this->schoolSettings = $schoolSettings;
+        $this->chat = $chat;
     }
 
     public function index() {
@@ -170,10 +176,20 @@ class SessionYearController extends Controller {
         ResponseService::noPermissionThenRedirect('session-year-delete');
         try {
             DB::beginTransaction();
+            $defaultSessionYear = $this->cache->getDefaultSessionYear();
+            $this->chat->builder()->whereDate('created_at','<=',$defaultSessionYear->end_date)->delete();
+            
             // Change the Current Default Session Year to Non-Default Session Year
             $this->sessionYear->builder()->where(['default' => 1])->update(['default' => 0]);
+            
             // Make new SessionYear as Default Session Year
             $this->sessionYear->builder()->where('id', $id)->update(['default' => 1]);
+            $data[] = [
+                "name" => 'session_year',
+                "data" => $id,
+                "type" => "number",
+            ];
+            $this->schoolSettings->upsert($data, ["name"], ["data"]);
             $this->cache->removeSchoolCache(config("constants.CACHE.SCHOOL.SESSION_YEAR"));
             DB::commit();
             ResponseService::successResponse("Default Session has been Changed SuccessFully");

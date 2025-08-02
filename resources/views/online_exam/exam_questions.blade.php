@@ -109,7 +109,7 @@
                                data-toggle="table" data-url="{{ route('online-exam-question.get-class-questions',$onlineExam->id) }}"
                                data-checkbox-header="false" data-click-to-select="true" data-side-pagination="server"
                                data-pagination="true" data-page-list="[5, 10, 20, 50, 100, 200]" data-search="true"
-                               data-show-columns="true" data-fixed-columns="true" data-trim-on-search="true"
+                               data-show-columns="true" data-fixed-columns="false" data-trim-on-search="true"
                                data-mobile-responsive="true" data-sort-name="id" data-sort-order="desc" data-maintain-selected="true"
                                data-query-params="onlineExamQuestionsQueryParams" data-show-refresh="true" data-escape="true">
                             <thead>
@@ -146,7 +146,7 @@
                                                         <textarea class="equation-editor-inline" name="q{{$data->question_id}}">{{htmlspecialchars_decode($data->questions->question)}}</textarea>
                                                     </div>
                                                     <span class="text-right row mx-0">
-                                                        <input type="number" class="list-group-item form-control-sm mb-2 mr-2 col-md-3 col-sm-12" placeholder="{{ __('enter_marks') }}" name="assign_questions[{{$data->question_id}}][marks]" value="{{$data->marks}}" min="0">
+                                                        <input type="number" min="1" class="list-group-item form-control-sm mb-2 mr-2 col-md-3 col-sm-12" placeholder="{{ __('enter_marks') }}" name="assign_questions[{{$data->question_id}}][marks]" value="{{$data->marks}}" min="0">
                                                         <a class="btn btn-danger btn-sm remove-row mb-2" data-edit_id="{{$data->id}}" data-id="{{$data->question_id}}">
                                                             <i class="fa fa-times" aria-hidden="true"></i>
                                                         </a>
